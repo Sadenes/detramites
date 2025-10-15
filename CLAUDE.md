@@ -118,14 +118,17 @@ Located in `lib/types.ts`:
 - `Device`: User device/session tracking
 - `ApiKey`: API key management for programmatic access
 
-## Mock Data
+## Production Credentials
 
-`lib/mock-data.ts` contains sample data for development:
+**Production (Railway/Vercel)**:
+- Superadmin: `admin_master` / `Admin2025!`
+- **⚠️ IMPORTANT**: Change password immediately after first login
 
-**Test Credentials**:
+**Local Development**:
+`lib/mock-data.ts` contains sample data for testing:
 - Superadmin: `admin_master` / `admin123`
-- Distributor: `distribuidor_juan` / `dist123`
-- End User: `usuario_carlos` / `user123`
+- Distributor: `distribuidor_test` / `dist123`
+- End User: `usuario_test` / `user123`
 
 ## Configuration Notes
 

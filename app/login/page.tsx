@@ -140,22 +140,6 @@ export default function LoginPage() {
                 {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
               </Button>
             </form>
-
-            {/* Demo credentials */}
-            <div className="mt-8 pt-6 border-t border-white/10">
-              <p className="text-white/70 text-sm text-center mb-3">Credenciales de prueba:</p>
-              <div className="space-y-2 text-xs text-white/60">
-                <p>
-                  <strong className="text-white/80">Superadmin:</strong> admin_master / admin123
-                </p>
-                <p>
-                  <strong className="text-white/80">Distribuidor:</strong> distribuidor_test / dist123
-                </p>
-                <p>
-                  <strong className="text-white/80">Usuario:</strong> usuario_test / user123
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
