@@ -1,0 +1,143 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPERADMIN_MASTER
+  SUPERADMIN_SECONDARY
+  DISTRIBUTOR
+  FINAL_USER
+}
+
+enum TransactionType {
+  ASSIGNED
+  CONSUMED
+  REFUNDED
+}
+
+enum QueryStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id             String   @id @default(uuid())
+  username       String   @unique
+  password       String
+  role           UserRole
+  credits        Int      @default(0)
+  canCreateUsers Boolean  @default(true) // Para distribuidores: indica si pueden crear usuarios
+
+  // Relación jerárquica: un distribuidor puede tener muchos usuarios
+  distributorId String?
+  distributor   User?   @relation("DistributorUsers", fields: [distributorId], references: [id], onDelete: Cascade)
+  users         User[]  @relation("DistributorUsers")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  creditTransactions CreditTransaction[]
+  apiQueries         ApiQuery[]
+  auditLogs          AuditLog[]
+  sessions           UserSession[]
+  failedLogins       FailedLoginAttempt[]
+
+  @@index([distributorId])
+  @@index([username])
+  @@index([role])
+}
+
+model CreditTransaction {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int
+  type        TransactionType
+  description String?
+  createdAt   DateTime        @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ApiQuery {
+  id         String      @id @default(uuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String
+  status     QueryStatus @default(PENDING)
+  request    Json?
+  response   Json?
+  errorMsg   String?
+  creditCost Int         @default(1)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model UserSession {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  deviceName   String?
+  deviceType   String?
+  browser      String?
+  os           String?
+  ipAddress    String
+  city         String?
+  country      String?
+  lastActivity DateTime @default(now())
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([ipAddress])
+  @@index([isActive])
+  @@index([lastActivity])
+}
+
+model FailedLoginAttempt {
+  id        String   @id @default(uuid())
+  username  String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ipAddress String
+  userAgent String?
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([username])
+  @@index([ipAddress])
+  @@index([createdAt])
+}

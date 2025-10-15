@@ -1,0 +1,334 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  SUPERADMIN_MASTER
+  SUPERADMIN_SECONDARY
+  DISTRIBUTOR
+  FINAL_USER
+}
+
+enum AccountType {
+  CREDITS
+  SUBSCRIPTION
+}
+
+enum TransactionType {
+  GRANT       // Superadmin crea créditos para distribuidor
+  DISTRIBUTE  // Distribuidor asigna a usuario final
+  CONSUME     // Consumo por query API
+  REFUND      // Reembolso automático por fallo
+}
+
+enum QueryStatus {
+  SUCCESS
+  ERROR
+  PENDING
+  REFUNDED
+}
+
+enum QueryAPI {
+  INFONAVIT_CHANGE_PASSWORD
+  INFONAVIT_UNLINK_DEVICE
+  INFONAVIT_NOTICES
+  INFONAVIT_HISTORICAL_STATEMENT
+  INFONAVIT_MONTHLY_STATEMENT
+  INFONAVIT_CREDIT_STATUS
+}
+
+enum SubscriptionPlan {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum AuditAction {
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  USER_ACTIVATED
+  USER_DEACTIVATED
+  CREDITS_GRANTED
+  CREDITS_DISTRIBUTED
+  CREDITS_CONSUMED
+  CREDITS_REFUNDED
+  QUERY_EXECUTED
+  QUERY_FAILED
+  SESSION_CREATED
+  SESSION_TERMINATED
+  PASSWORD_CHANGED
+  SETTINGS_UPDATED
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String   // Hashed with bcrypt
+  role      UserRole
+
+  // Credits & Subscription
+  accountType     AccountType?
+  credits         Int             @default(0)
+  subscription    Subscription?
+
+  // Relationships
+  distributorId   String?
+  distributor     User?           @relation("DistributorUsers", fields: [distributorId], references: [id], onDelete: SetNull)
+  finalUsers      User[]          @relation("DistributorUsers")
+
+  // Transactions
+  transactionsFrom CreditTransaction[] @relation("TransactionFrom")
+  transactionsTo   CreditTransaction[] @relation("TransactionTo")
+
+  // Queries
+  queries         Query[]
+
+  // Sessions & Security
+  sessions        Session[]
+  devices         Device[]
+  failedLogins    FailedLogin[]
+  auditLogs       AuditLog[]
+
+  // Metadata
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastLoginAt     DateTime?
+
+  @@index([email])
+  @@index([username])
+  @@index([distributorId])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Subscription {
+  id                  String           @id @default(uuid())
+  userId              String           @unique
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  plan                SubscriptionPlan
+  startDate           DateTime         @default(now())
+  endDate             DateTime
+
+  // Rate Limiting
+  queriesThisHour     Int              @default(0)
+  queriesToday        Int              @default(0)
+  queriesThisPeriod   Int              @default(0)
+  hourResetAt         DateTime?
+  dayResetAt          DateTime?
+  periodResetAt       DateTime?
+
+  isActive            Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([endDate])
+  @@map("subscriptions")
+}
+
+model CreditTransaction {
+  id                  String          @id @default(uuid())
+  type                TransactionType
+  amount              Int
+
+  // From/To Users
+  fromUserId          String?
+  fromUser            User?           @relation("TransactionFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUserId            String?
+  toUser              User?           @relation("TransactionTo", fields: [toUserId], references: [id], onDelete: SetNull)
+
+  // Balance tracking
+  fromBalanceBefore   Int?
+  fromBalanceAfter    Int?
+  toBalanceBefore     Int?
+  toBalanceAfter      Int?
+
+  // Metadata
+  notes               String?
+  queryId             String?         @unique
+  query               Query?          @relation(fields: [queryId], references: [id], onDelete: SetNull)
+
+  // Idempotency
+  idempotencyKey      String          @unique
+
+  createdAt           DateTime        @default(now())
+
+  @@index([type])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([queryId])
+  @@index([createdAt])
+  @@index([idempotencyKey])
+  @@map("credit_transactions")
+}
+
+model Query {
+  id                  String          @id @default(uuid())
+  userId              String
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  api                 QueryAPI
+  status              QueryStatus     @default(PENDING)
+
+  // Request data (encrypted/hashed)
+  requestData         Json            // NSS, CURP, etc.
+  responseData        Json?           // API response
+
+  // Cost & Credits
+  creditsCost         Int
+  creditsRefunded     Int             @default(0)
+
+  // Related transaction
+  transaction         CreditTransaction?
+
+  // Performance
+  responseTime        Int?            // milliseconds
+
+  // Error handling
+  errorMessage        String?
+  errorCode           String?
+  retryCount          Int             @default(0)
+
+  // Metadata
+  ipAddress           String?
+  userAgent           String?
+
+  createdAt           DateTime        @default(now())
+  completedAt         DateTime?
+
+  @@index([userId])
+  @@index([api])
+  @@index([status])
+  @@index([createdAt])
+  @@map("queries")
+}
+
+model Session {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token               String   @unique
+  refreshToken        String?  @unique
+
+  // Session info
+  ipAddress           String
+  userAgent           String?
+  deviceInfo          String?
+
+  expiresAt           DateTime
+  lastActivityAt      DateTime @default(now())
+
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@index([refreshToken])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("sessions")
+}
+
+model Device {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deviceName          String
+  deviceFingerprint   String   @unique // Hash of device characteristics
+  ipAddress           String
+  location            String?
+
+  isTrusted           Boolean  @default(false)
+  lastAccessAt        DateTime @default(now())
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+  @@index([deviceFingerprint])
+  @@map("devices")
+}
+
+model FailedLogin {
+  id                  String   @id @default(uuid())
+  userId              String?
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  username            String
+  ipAddress           String
+  userAgent           String?
+
+  reason              String   // "Invalid password", "User not found", "Account locked"
+
+  createdAt           DateTime @default(now())
+
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@map("failed_logins")
+}
+
+model AuditLog {
+  id                  String      @id @default(uuid())
+  userId              String?
+  user                User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action              AuditAction
+  description         String
+
+  // Context
+  ipAddress           String?
+  userAgent           String?
+  metadata            Json?       // Additional context
+
+  createdAt           DateTime    @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model SystemSettings {
+  id                  String   @id @default(uuid())
+  key                 String   @unique
+  value               Json
+  description         String?
+
+  updatedBy           String?
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+
+  @@index([key])
+  @@map("system_settings")
+}
+
+// ============================================
+// VIEWS (for reporting/analytics)
+// ============================================
+
+// Note: These would be created as database views or computed via Prisma queries
+// Example: Daily credit statistics, user activity metrics, etc.
