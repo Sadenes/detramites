@@ -20,49 +20,125 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
-import { Download, TrendingUp, Users, Coins, Search } from "lucide-react"
-import { mockUsers, mockQueries } from "@/lib/mock-data"
-import { useState } from "react"
+import { Download, TrendingUp, Users, Coins, Search, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/contexts/auth-context"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+
+interface User {
+  id: string
+  username: string
+  email: string | null
+  role: string
+  credits: number
+}
+
+interface Query {
+  id: string
+  api: string
+  status: string
+  createdAt: string
+}
 
 export default function ReportsPage() {
+  const { token } = useAuth()
   const [timeRange, setTimeRange] = useState("7d")
+  const [users, setUsers] = useState<User[]>([])
+  const [queries, setQueries] = useState<Query[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Mock data for charts
+  useEffect(() => {
+    fetchData()
+  }, [token])
+
+  const fetchData = async () => {
+    if (!token) return
+
+    try {
+      setIsLoading(true)
+
+      // Fetch all users
+      const usersRes = await fetch(`${API_URL}/api/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json()
+        setUsers(usersData.data || [])
+      }
+
+      // Fetch audit logs
+      const logsRes = await fetch(`${API_URL}/api/logs/audit`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (logsRes.ok) {
+        const logsData = await logsRes.json()
+        setQueries(logsData.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Mock data for charts (will be replaced with real analytics later)
   const dailyQueriesData = [
-    { date: "Lun", queries: 45, success: 42, error: 3 },
-    { date: "Mar", queries: 52, success: 48, error: 4 },
-    { date: "Mié", queries: 38, success: 36, error: 2 },
-    { date: "Jue", queries: 61, success: 58, error: 3 },
-    { date: "Vie", queries: 55, success: 51, error: 4 },
-    { date: "Sáb", queries: 28, success: 27, error: 1 },
-    { date: "Dom", queries: 32, success: 30, error: 2 },
+    { date: "Lun", queries: queries.length > 0 ? Math.floor(queries.length / 7) : 0, success: queries.filter(q => q.status === 'success').length > 0 ? Math.floor(queries.filter(q => q.status === 'success').length / 7) : 0, error: 0 },
+    { date: "Mar", queries: queries.length > 0 ? Math.floor(queries.length / 7) : 0, success: queries.filter(q => q.status === 'success').length > 0 ? Math.floor(queries.filter(q => q.status === 'success').length / 7) : 0, error: 0 },
+    { date: "Mié", queries: queries.length > 0 ? Math.floor(queries.length / 7) : 0, success: queries.filter(q => q.status === 'success').length > 0 ? Math.floor(queries.filter(q => q.status === 'success').length / 7) : 0, error: 0 },
+    { date: "Jue", queries: queries.length > 0 ? Math.floor(queries.length / 7) : 0, success: queries.filter(q => q.status === 'success').length > 0 ? Math.floor(queries.filter(q => q.status === 'success').length / 7) : 0, error: 0 },
+    { date: "Vie", queries: queries.length > 0 ? Math.floor(queries.length / 7) : 0, success: queries.filter(q => q.status === 'success').length > 0 ? Math.floor(queries.filter(q => q.status === 'success').length / 7) : 0, error: 0 },
+    { date: "Sáb", queries: 0, success: 0, error: 0 },
+    { date: "Dom", queries: 0, success: 0, error: 0 },
   ]
 
+  const infonavitQueries = queries.filter(q => q.api === 'INFONAVIT').length
   const apiUsageData = [
-    { name: "INFONAVIT", value: 311, color: "#f97316" },
+    { name: "INFONAVIT", value: infonavitQueries || 1, color: "#f97316" },
     { name: "SAT", value: 0, color: "#eab308" },
     { name: "IMSS", value: 0, color: "#3b82f6" },
   ]
 
   const userGrowthData = [
-    { month: "Ene", users: 12 },
-    { month: "Feb", users: 19 },
-    { month: "Mar", users: 25 },
-    { month: "Abr", users: 32 },
-    { month: "May", users: 41 },
-    { month: "Jun", users: 48 },
+    { month: "Ene", users: Math.floor(users.length / 6) },
+    { month: "Feb", users: Math.floor(users.length / 5) },
+    { month: "Mar", users: Math.floor(users.length / 4) },
+    { month: "Abr", users: Math.floor(users.length / 3) },
+    { month: "May", users: Math.floor(users.length / 2) },
+    { month: "Jun", users: users.length },
   ]
 
   const creditsFlowData = [
-    { week: "Sem 1", distributed: 2500, consumed: 1800 },
-    { week: "Sem 2", distributed: 3200, consumed: 2400 },
-    { week: "Sem 3", distributed: 1800, consumed: 2100 },
-    { week: "Sem 4", distributed: 4500, consumed: 3200 },
+    { week: "Sem 1", distributed: 0, consumed: 0 },
+    { week: "Sem 2", distributed: 0, consumed: 0 },
+    { week: "Sem 3", distributed: 0, consumed: 0 },
+    { week: "Sem 4", distributed: 0, consumed: 0 },
   ]
 
-  const totalQueries = mockQueries.length
-  const successRate = ((mockQueries.filter((q) => q.status === "success").length / totalQueries) * 100).toFixed(1)
-  const avgResponseTime = "1.1s"
+  const totalQueries = queries.length
+  const successRate = totalQueries > 0 ? ((queries.filter((q) => q.status === "success").length / totalQueries) * 100).toFixed(1) : "0.0"
+  const avgResponseTime = "N/A"
+
+  if (isLoading) {
+    return (
+      <ProtectedRoute allowedRoles={["superadmin_master", "superadmin_secondary", "SUPERADMIN_MASTER", "SUPERADMIN_SECONDARY"]}>
+        <DashboardLayout>
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
 
   return (
     <ProtectedRoute allowedRoles={["superadmin_master", "superadmin_secondary", "SUPERADMIN_MASTER", "SUPERADMIN_SECONDARY"]}>
@@ -129,7 +205,7 @@ export default function ReportsPage() {
                   </div>
                   <div>
                     <p className="text-white/70 text-sm">Usuarios Totales</p>
-                    <p className="text-white text-2xl font-bold">{mockUsers.length}</p>
+                    <p className="text-white text-2xl font-bold">{users.length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -281,19 +357,19 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">Superadmins</span>
                     <span className="text-white font-bold">
-                      {mockUsers.filter((u) => u.role.includes("superadmin")).length}
+                      {users.filter((u) => u.role.includes("SUPERADMIN")).length}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">Distribuidores</span>
                     <span className="text-white font-bold">
-                      {mockUsers.filter((u) => u.role === "distributor").length}
+                      {users.filter((u) => u.role === "DISTRIBUTOR").length}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">Usuarios Finales</span>
                     <span className="text-white font-bold">
-                      {mockUsers.filter((u) => u.role === "final_user").length}
+                      {users.filter((u) => u.role === "FINAL_USER").length}
                     </span>
                   </div>
                 </div>
@@ -308,11 +384,11 @@ export default function ReportsPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">INFONAVIT</span>
-                    <span className="text-green-400 font-bold">99.2%</span>
+                    <span className="text-green-400 font-bold">{successRate}%</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">Tiempo Promedio</span>
-                    <span className="text-white font-bold">1.1s</span>
+                    <span className="text-white font-bold">{avgResponseTime}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">Uptime</span>
@@ -331,16 +407,16 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">Total Circulante</span>
                     <span className="text-white font-bold">
-                      {mockUsers.reduce((sum, u) => sum + (u.credits || 0), 0).toLocaleString()}
+                      {users.reduce((sum, u) => sum + (u.credits || 0), 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">Distribuidos Hoy</span>
-                    <span className="text-orange-400 font-bold">1,100</span>
+                    <span className="text-orange-400 font-bold">N/A</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-white/70">Consumidos Hoy</span>
-                    <span className="text-purple-400 font-bold">320</span>
+                    <span className="text-purple-400 font-bold">N/A</span>
                   </div>
                 </div>
               </CardContent>

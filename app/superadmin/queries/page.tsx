@@ -2,31 +2,90 @@
 
 import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { useState } from "react"
-import { mockQueries } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Download, Eye } from "lucide-react"
+import { Search, Download, Eye, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+
+interface Query {
+  id: string
+  userId: string
+  api: string
+  status: string
+  responseTime?: string
+  createdAt: string
+  user?: {
+    email?: string
+    username?: string
+  }
+}
+
 export default function QueriesPage() {
+  const { token } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterApi, setFilterApi] = useState("all")
-  const [selectedQuery, setSelectedQuery] = useState<any>(null)
+  const [selectedQuery, setSelectedQuery] = useState<Query | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [queries, setQueries] = useState<Query[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const filteredQueries = mockQueries.filter((query) => {
+  useEffect(() => {
+    fetchQueries()
+  }, [token])
+
+  const fetchQueries = async () => {
+    if (!token) return
+
+    try {
+      setIsLoading(true)
+
+      const response = await fetch(`${API_URL}/api/logs/audit`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setQueries(data.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching queries:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const filteredQueries = queries.filter((query) => {
+    const userEmail = query.user?.email || query.user?.username || ''
     const matchesSearch =
-      query.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
       query.api.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || query.status === filterStatus
     const matchesApi = filterApi === "all" || query.api === filterApi
     return matchesSearch && matchesStatus && matchesApi
   })
+
+  if (isLoading) {
+    return (
+      <ProtectedRoute allowedRoles={["superadmin_master", "superadmin_secondary", "SUPERADMIN_MASTER", "SUPERADMIN_SECONDARY"]}>
+        <DashboardLayout>
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
 
   return (
     <ProtectedRoute allowedRoles={["superadmin_master", "superadmin_secondary", "SUPERADMIN_MASTER", "SUPERADMIN_SECONDARY"]}>
@@ -49,14 +108,14 @@ export default function QueriesPage() {
             <Card className="bg-white/5 backdrop-blur-md border-white/10">
               <CardContent className="pt-6">
                 <p className="text-white/70 text-sm">Total</p>
-                <p className="text-white text-3xl font-bold">{mockQueries.length}</p>
+                <p className="text-white text-3xl font-bold">{queries.length}</p>
               </CardContent>
             </Card>
             <Card className="bg-green-500/10 border-green-500/20">
               <CardContent className="pt-6">
                 <p className="text-white/70 text-sm">Exitosas</p>
                 <p className="text-white text-3xl font-bold">
-                  {mockQueries.filter((q) => q.status === "success").length}
+                  {queries.filter((q) => q.status === "success").length}
                 </p>
               </CardContent>
             </Card>
@@ -64,14 +123,14 @@ export default function QueriesPage() {
               <CardContent className="pt-6">
                 <p className="text-white/70 text-sm">Con Error</p>
                 <p className="text-white text-3xl font-bold">
-                  {mockQueries.filter((q) => q.status === "error").length}
+                  {queries.filter((q) => q.status === "error" || q.status === "failed").length}
                 </p>
               </CardContent>
             </Card>
             <Card className="bg-blue-500/10 border-blue-500/20">
               <CardContent className="pt-6">
                 <p className="text-white/70 text-sm">Tiempo Promedio</p>
-                <p className="text-white text-3xl font-bold">1.1s</p>
+                <p className="text-white text-3xl font-bold">N/A</p>
               </CardContent>
             </Card>
           </div>
@@ -106,6 +165,7 @@ export default function QueriesPage() {
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="success">Exitosas</SelectItem>
                 <SelectItem value="error">Con Error</SelectItem>
+                <SelectItem value="failed">Fallidas</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -116,44 +176,50 @@ export default function QueriesPage() {
               <CardTitle className="text-white">Consultas ({filteredQueries.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {filteredQueries.map((query) => (
-                  <div
-                    key={query.id}
-                    className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <p className="text-white font-medium">{query.api}</p>
-                        <Badge
-                          className={query.status === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
+              {filteredQueries.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredQueries.map((query) => (
+                    <div
+                      key={query.id}
+                      className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <p className="text-white font-medium">{query.api}</p>
+                          <Badge
+                            className={query.status === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
+                          >
+                            {query.status}
+                          </Badge>
+                        </div>
+                        <p className="text-white/70 text-sm">{query.user?.email || query.user?.username || 'Usuario desconocido'}</p>
+                        <p className="text-white/60 text-xs">{new Date(query.createdAt).toLocaleString()}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="text-white/70 text-sm">Tiempo de respuesta</p>
+                          <p className="text-white font-medium">{query.responseTime || 'N/A'}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-white/70 hover:text-white hover:bg-white/10"
+                          onClick={() => {
+                            setSelectedQuery(query)
+                            setIsViewDialogOpen(true)
+                          }}
                         >
-                          {query.status}
-                        </Badge>
+                          <Eye className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <p className="text-white/70 text-sm">{query.userEmail}</p>
-                      <p className="text-white/60 text-xs">{new Date(query.createdAt).toLocaleString()}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="text-white/70 text-sm">Tiempo de respuesta</p>
-                        <p className="text-white font-medium">{query.responseTime}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-white/70 hover:text-white hover:bg-white/10"
-                        onClick={() => {
-                          setSelectedQuery(query)
-                          setIsViewDialogOpen(true)
-                        }}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/60 text-center py-8">
+                  {queries.length === 0 ? 'No hay consultas registradas' : 'No se encontraron consultas con los filtros aplicados'}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -185,7 +251,7 @@ export default function QueriesPage() {
                     </div>
                     <div>
                       <p className="text-white/70 text-sm">Usuario</p>
-                      <p className="text-white font-medium">{selectedQuery.userEmail}</p>
+                      <p className="text-white font-medium">{selectedQuery.user?.email || selectedQuery.user?.username || 'Usuario desconocido'}</p>
                     </div>
                     <div>
                       <p className="text-white/70 text-sm">Fecha</p>
@@ -193,7 +259,7 @@ export default function QueriesPage() {
                     </div>
                     <div>
                       <p className="text-white/70 text-sm">Tiempo de Respuesta</p>
-                      <p className="text-white font-medium">{selectedQuery.responseTime}</p>
+                      <p className="text-white font-medium">{selectedQuery.responseTime || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-white/70 text-sm">ID de Consulta</p>

@@ -3,18 +3,101 @@
 import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { StatCard } from "@/components/stat-card"
-import { Users, Search, Coins, Activity, CheckCircle, Clock } from "lucide-react"
-import { mockUsers, mockQueries } from "@/lib/mock-data"
+import { Users, Search, Coins, Activity, CheckCircle, Clock, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/contexts/auth-context"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+
+interface User {
+  id: string
+  username: string
+  email: string | null
+  role: string
+  credits: number
+  isActive: boolean
+}
+
+interface Query {
+  id: string
+  userId: string
+  api: string
+  status: string
+  responseTime: string
+  createdAt: string
+  user?: {
+    email?: string
+  }
+}
 
 export default function SuperadminDashboard() {
+  const { token } = useAuth()
+  const [users, setUsers] = useState<User[]>([])
+  const [queries, setQueries] = useState<Query[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetchData()
+  }, [token])
+
+  const fetchData = async () => {
+    if (!token) return
+
+    try {
+      setIsLoading(true)
+
+      // Fetch all users
+      const usersRes = await fetch(`${API_URL}/api/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json()
+        setUsers(usersData.data || [])
+      }
+
+      // Fetch audit logs (queries)
+      const logsRes = await fetch(`${API_URL}/api/logs/audit`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (logsRes.ok) {
+        const logsData = await logsRes.json()
+        setQueries(logsData.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Calculate metrics
-  const totalUsers = mockUsers.length
-  const activeUsers = mockUsers.filter((u) => u.isActive).length
-  const totalQueries = mockQueries.length
-  const totalCredits = mockUsers.reduce((sum, u) => sum + (u.credits || 0), 0)
-  const distributors = mockUsers.filter((u) => u.role === "distributor" || u.role === "DISTRIBUTOR")
+  const totalUsers = users.length
+  const activeUsers = users.filter((u) => u.isActive).length
+  const totalQueries = queries.length
+  const totalCredits = users.reduce((sum, u) => sum + (u.credits || 0), 0)
+  const distributors = users.filter((u) => u.role === "DISTRIBUTOR")
+
+  if (isLoading) {
+    return (
+      <ProtectedRoute allowedRoles={["superadmin_master", "superadmin_secondary", "SUPERADMIN_MASTER", "SUPERADMIN_SECONDARY"]}>
+        <DashboardLayout>
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
 
   return (
     <ProtectedRoute allowedRoles={["superadmin_master", "superadmin_secondary", "SUPERADMIN_MASTER", "SUPERADMIN_SECONDARY"]}>
@@ -32,13 +115,11 @@ export default function SuperadminDashboard() {
               title="Usuarios Activos"
               value={activeUsers}
               icon={Users}
-              trend={{ value: "+12% vs mes anterior", isPositive: true }}
             />
             <StatCard
-              title="Consultas Hoy"
+              title="Total Consultas"
               value={totalQueries}
               icon={Search}
-              trend={{ value: "+8% vs ayer", isPositive: true }}
             />
             <StatCard title="Créditos Circulantes" value={totalCredits.toLocaleString()} icon={Coins} />
             <StatCard
@@ -99,24 +180,28 @@ export default function SuperadminDashboard() {
                 <CardTitle className="text-white">Consultas Recientes</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {mockQueries.slice(0, 5).map((query) => (
-                    <div key={query.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                      <div>
-                        <p className="text-white text-sm font-medium">{query.userEmail}</p>
-                        <p className="text-white/60 text-xs">{query.api}</p>
+                {queries.length > 0 ? (
+                  <div className="space-y-3">
+                    {queries.slice(0, 5).map((query) => (
+                      <div key={query.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                        <div>
+                          <p className="text-white text-sm font-medium">{query.user?.email || 'Usuario desconocido'}</p>
+                          <p className="text-white/60 text-xs">{query.api}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge
+                            className={query.status === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
+                          >
+                            {query.status}
+                          </Badge>
+                          <p className="text-white/60 text-xs mt-1">{query.responseTime || 'N/A'}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <Badge
-                          className={query.status === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
-                        >
-                          {query.status}
-                        </Badge>
-                        <p className="text-white/60 text-xs mt-1">{query.responseTime}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-white/60 text-center py-8">No hay consultas recientes</p>
+                )}
               </CardContent>
             </Card>
 
@@ -126,23 +211,27 @@ export default function SuperadminDashboard() {
                 <CardTitle className="text-white">Top Distribuidores</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {distributors
-                    .sort((a, b) => (b.credits || 0) - (a.credits || 0))
-                    .slice(0, 5)
-                    .map((dist) => (
-                      <div key={dist.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                        <div>
-                          <p className="text-white text-sm font-medium">{dist.username}</p>
-                          <p className="text-white/60 text-xs">{dist.email}</p>
+                {distributors.length > 0 ? (
+                  <div className="space-y-3">
+                    {distributors
+                      .sort((a, b) => (b.credits || 0) - (a.credits || 0))
+                      .slice(0, 5)
+                      .map((dist) => (
+                        <div key={dist.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                          <div>
+                            <p className="text-white text-sm font-medium">{dist.username}</p>
+                            <p className="text-white/60 text-xs">{dist.email || 'Sin email'}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-orange-400 font-bold">{dist.credits?.toLocaleString() || 0}</p>
+                            <p className="text-white/60 text-xs">créditos</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-orange-400 font-bold">{dist.credits?.toLocaleString() || 0}</p>
-                          <p className="text-white/60 text-xs">créditos</p>
-                        </div>
-                      </div>
-                    ))}
-                </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-white/60 text-center py-8">No hay distribuidores registrados</p>
+                )}
               </CardContent>
             </Card>
           </div>

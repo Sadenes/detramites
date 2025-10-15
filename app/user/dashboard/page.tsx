@@ -3,20 +3,87 @@
 import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { StatCard } from "@/components/stat-card"
-import { Coins, Search, Calendar, TrendingUp, AlertCircle } from "lucide-react"
+import { Coins, Search, Calendar, TrendingUp, AlertCircle, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
-import { mockQueries } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+
+interface Query {
+  id: string
+  api: string
+  status: string
+  responseTime?: string
+  createdAt: string
+}
 
 export default function UserDashboard() {
-  const { user } = useAuth()
+  const { user, token } = useAuth()
+  const [queries, setQueries] = useState<Query[]>([])
+  const [creditBalance, setCreditBalance] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetchData()
+  }, [token])
+
+  const fetchData = async () => {
+    if (!token) return
+
+    try {
+      setIsLoading(true)
+
+      // Fetch queries
+      const queriesRes = await fetch(`${API_URL}/api/logs/my-queries`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (queriesRes.ok) {
+        const queriesData = await queriesRes.json()
+        setQueries(queriesData.data || [])
+      }
+
+      // Fetch credit balance
+      const balanceRes = await fetch(`${API_URL}/api/credits/balance`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (balanceRes.ok) {
+        const balanceData = await balanceRes.json()
+        setCreditBalance(balanceData.data?.credits || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const isSubscription = user?.accountType === "subscription"
-  const myQueries = mockQueries.filter((q) => q.userId === user?.id)
+  const successfulQueries = queries.filter((q) => q.status === "success").length
+
+  if (isLoading) {
+    return (
+      <ProtectedRoute allowedRoles={["final_user", "FINAL_USER"]}>
+        <DashboardLayout>
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
 
   return (
     <ProtectedRoute allowedRoles={["final_user", "FINAL_USER"]}>
@@ -29,11 +96,11 @@ export default function UserDashboard() {
           </div>
 
           {/* Upgrade Notice for users with 1000+ credits */}
-          {!isSubscription && user?.credits && user.credits >= 1000 && (
+          {!isSubscription && creditBalance >= 1000 && (
             <Alert className="bg-orange-500/20 border-orange-500/50">
               <AlertCircle className="h-4 w-4 text-orange-400" />
               <AlertDescription className="text-white text-sm md:text-base">
-                Tienes {user.credits.toLocaleString()} créditos. Eres elegible para convertirte en distribuidor y
+                Tienes {creditBalance.toLocaleString()} créditos. Eres elegible para convertirte en distribuidor y
                 obtener beneficios adicionales.
                 <Button className="ml-0 sm:ml-4 mt-2 sm:mt-0 bg-orange-500 hover:bg-orange-600 text-white" size="sm">
                   Solicitar Upgrade
@@ -47,17 +114,17 @@ export default function UserDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               <StatCard
                 title="Créditos Disponibles"
-                value={user?.credits?.toLocaleString() || "0"}
+                value={creditBalance.toLocaleString()}
                 icon={Coins}
                 className="border-orange-500/20"
               />
-              <StatCard title="Consultas Realizadas" value={myQueries.length} icon={Search} />
+              <StatCard title="Consultas Realizadas" value={queries.length} icon={Search} />
               <StatCard
                 title="Consultas Exitosas"
-                value={myQueries.filter((q) => q.status === "success").length}
+                value={successfulQueries}
                 icon={TrendingUp}
               />
-              <StatCard title="Este Mes" value={myQueries.length} icon={Calendar} />
+              <StatCard title="Este Mes" value={queries.length} icon={Calendar} />
             </div>
           )}
 
@@ -191,9 +258,9 @@ export default function UserDashboard() {
               <CardTitle className="text-white">Consultas Recientes</CardTitle>
             </CardHeader>
             <CardContent>
-              {myQueries.length > 0 ? (
+              {queries.length > 0 ? (
                 <div className="space-y-3">
-                  {myQueries.slice(0, 5).map((query) => (
+                  {queries.slice(0, 5).map((query) => (
                     <div
                       key={query.id}
                       className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white/5 rounded-lg gap-2"
@@ -208,7 +275,7 @@ export default function UserDashboard() {
                         >
                           {query.status}
                         </Badge>
-                        <p className="text-white/60 text-xs mt-1">{query.responseTime}</p>
+                        <p className="text-white/60 text-xs mt-1">{query.responseTime || 'N/A'}</p>
                       </div>
                     </div>
                   ))}
