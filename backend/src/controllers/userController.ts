@@ -5,6 +5,7 @@ import prisma from '../utils/prisma';
 import { UserRole } from '@prisma/client';
 import { logAudit } from '../services/auditService';
 import { assignCredits, canDistributorAssignCredits } from '../services/creditService';
+import { validatePassword } from '../utils/validators';
 
 // Listar todos los usuarios (solo superadmin)
 export const getAllUsers = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -90,10 +91,12 @@ export const createSuperadminSecondary = async (req: AuthRequest, res: Response)
       return;
     }
 
-    if (password.length < 6) {
+    // Validar contraseña
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
       res.status(400).json({
         success: false,
-        error: 'Password debe tener al menos 6 caracteres',
+        error: passwordValidation.error,
       });
       return;
     }
@@ -173,10 +176,12 @@ export const createDistributor = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    if (password.length < 6) {
+    // Validar contraseña
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
       res.status(400).json({
         success: false,
-        error: 'Password debe tener al menos 6 caracteres',
+        error: passwordValidation.error,
       });
       return;
     }
@@ -250,10 +255,12 @@ export const createFinalUser = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    if (password.length < 6) {
+    // Validar contraseña
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
       res.status(400).json({
         success: false,
-        error: 'Password debe tener al menos 6 caracteres',
+        error: passwordValidation.error,
       });
       return;
     }
@@ -445,6 +452,16 @@ export const changePassword = async (req: AuthRequest, res: Response): Promise<v
 
     if (!req.user) {
       res.status(401).json({ success: false, error: 'No autenticado' });
+      return;
+    }
+
+    // Validar nueva contraseña
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      res.status(400).json({
+        success: false,
+        error: passwordValidation.error,
+      });
       return;
     }
 

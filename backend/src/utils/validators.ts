@@ -59,6 +59,36 @@ export const buscarCreditoSchema = z.object({
   nss: nssSchema,
 });
 
+// Validación de contraseña - solo caracteres seguros
+export const validatePassword = (password: string): { isValid: boolean; error?: string } => {
+  if (!password || password.length < 6) {
+    return {
+      isValid: false,
+      error: 'La contraseña debe tener al menos 6 caracteres',
+    };
+  }
+
+  if (password.length > 50) {
+    return {
+      isValid: false,
+      error: 'La contraseña no puede tener más de 50 caracteres',
+    };
+  }
+
+  // Solo permite letras, números, y símbolos básicos: !@#$%&*_-+=
+  // NO permite: espacios, comillas, puntos, comas, paréntesis, etc.
+  const allowedPattern = /^[a-zA-Z0-9!@#$%&*_\-+=]+$/;
+
+  if (!allowedPattern.test(password)) {
+    return {
+      isValid: false,
+      error: 'La contraseña solo puede contener letras, números y los símbolos: !@#$%&*_-+=  (sin espacios)',
+    };
+  }
+
+  return { isValid: true };
+};
+
 // Helper para sanitizar inputs
 export const sanitizeInput = (input: string): string => {
   return input.trim().replace(/[^\w\s-]/gi, '');
