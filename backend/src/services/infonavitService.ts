@@ -136,6 +136,7 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
   });
 
   try {
+    // Paso 1: Desvincular dispositivo
     const response = await axios.post(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/RealizaDesvinculacionSDS',
       {
@@ -152,17 +153,44 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
       }
     );
 
+    // Paso 2: Cambiar contraseña automáticamente
+    const newPassword = nss + generateRandomChars(4);
+
+    try {
+      await axios.post(
+        'https://serviciosweb.infonavit.org.mx/RESTAdapter/CambiarPwdMailSDS',
+        {
+          ID_CAT_APP: 'APL0211',
+          grupo: 'cn=GS_MICUENTA,ou=atencionservicios,ou=areasapoyo,O=INFONAVIT',
+          usuario: nss,
+          valor: newPassword,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'User-Agent': getRandomUserAgent(),
+            'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+          },
+          timeout: 30000,
+        }
+      );
+    } catch (passwordError: any) {
+      // Si falla el cambio de contraseña, aún reportamos éxito en la desvinculación
+      console.error('Error al cambiar contraseña después de desvinculación:', passwordError);
+    }
+
     await prisma.apiQuery.update({
       where: { id: queryRecord.id },
       data: {
         status: QueryStatus.COMPLETED,
-        response: response.data,
+        response: { ...response.data, newPassword },
       },
     });
 
     return {
       success: true,
-      message: 'Dispositivo desvinculado correctamente',
+      message: 'Dispositivo desvinculado y contraseña actualizada correctamente',
+      newPassword,
       response: response.data,
     };
   } catch (error: any) {
