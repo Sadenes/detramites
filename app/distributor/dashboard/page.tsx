@@ -59,7 +59,7 @@ export default function DistributorDashboard() {
 
       if (balanceRes.ok) {
         const balanceData = await balanceRes.json()
-        setCreditBalance(balanceData.data?.credits || 0)
+        setCreditBalance(balanceData.data?.balance || 0)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
