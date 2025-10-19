@@ -99,7 +99,7 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
           'User-Agent': getRandomUserAgent(),
           'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
         },
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
@@ -149,7 +149,7 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
           'Content-Type': 'application/json',
           'User-Agent': getRandomUserAgent(),
         },
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
@@ -171,7 +171,7 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
             'User-Agent': getRandomUserAgent(),
             'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
           },
-          timeout: 30000,
+          timeout: 15000,
         }
       );
     } catch (passwordError: any) {
@@ -226,12 +226,12 @@ export const consultarAvisos = async (credito: string, userId: string): Promise<
           'Content-Type': 'application/json',
         },
         httpsAgent,
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
-    // Esperar 2 segundos
-    await sleep(2000);
+    // Esperar 1 segundo (optimizado)
+    await sleep(1000);
 
     // Segunda request (mismo payload)
     const response2 = await axios.post(
@@ -247,12 +247,54 @@ export const consultarAvisos = async (credito: string, userId: string): Promise<
           'Content-Type': 'application/json',
         },
         httpsAgent,
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
+    // Validar respuesta del servidor
+    if (!response2.data || !response2.data.contenido) {
+      await prisma.apiQuery.update({
+        where: { id: queryRecord.id },
+        data: {
+          status: QueryStatus.FAILED,
+          errorMsg: 'Respuesta inválida del servidor INFONAVIT',
+        },
+      });
+
+      throw new Error('Respuesta inválida del servidor INFONAVIT');
+    }
+
+    // Verificar si hay un error en la respuesta (status diferente de 200 o sin PDF)
+    const contenido = response2.data.contenido;
+    if (contenido.status && contenido.status !== 200) {
+      const errorMessage = contenido.message || 'Error desconocido al consultar avisos';
+
+      await prisma.apiQuery.update({
+        where: { id: queryRecord.id },
+        data: {
+          status: QueryStatus.FAILED,
+          errorMsg: `Error ${contenido.status}: ${errorMessage}`,
+        },
+      });
+
+      throw new Error(errorMessage);
+    }
+
+    // Verificar que exista el PDF
+    if (!contenido.pdf) {
+      await prisma.apiQuery.update({
+        where: { id: queryRecord.id },
+        data: {
+          status: QueryStatus.FAILED,
+          errorMsg: 'No se encontraron avisos de retención para este crédito',
+        },
+      });
+
+      throw new Error('No se encontraron avisos de retención para este crédito');
+    }
+
     // Descomprimir ZIP y extraer PDFs
-    const zipBase64 = response2.data.contenido.pdf;
+    const zipBase64 = contenido.pdf;
     const zipBuffer = Buffer.from(zipBase64, 'base64');
     const zip = new AdmZip(zipBuffer);
 
@@ -315,7 +357,7 @@ export const estadoCuentaMensual = async (
           Authorization: `Bearer ${token || ''}`,
           'Content-Type': 'application/json',
         },
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
@@ -335,12 +377,13 @@ export const estadoCuentaMensual = async (
       };
     }
 
-    // 4.2 Por cada periodo, obtener estado de cuenta
+    // 4.2 Por cada periodo, obtener estado de cuenta (en paralelo para mejor performance)
     const pdfs: any[] = [];
     const errors: any[] = [];
 
-    for (const periodo of periodos) {
-      try {
+    // Ejecutar todas las requests en paralelo
+    const results = await Promise.allSettled(
+      periodos.map(async (periodo) => {
         const response = await axios.post(
           'https://serviciosweb.infonavit.org.mx/RESTAdapter/SndEdoCuentaMensualConsultar',
           {
@@ -352,9 +395,20 @@ export const estadoCuentaMensual = async (
               Authorization: `Bearer ${token || ''}`,
               'Content-Type': 'application/json',
             },
-            timeout: 30000,
+            timeout: 15000,
           }
         );
+        return { periodo, response };
+      })
+    );
+
+    // Procesar resultados
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const periodo = periodos[i];
+
+      if (result.status === 'fulfilled') {
+        const { response } = result.value;
 
         // Verificar código de respuesta
         if (response.data.StatusServicio.codigo === '02') {
@@ -375,7 +429,8 @@ export const estadoCuentaMensual = async (
             data: response.data.reporte,
           });
         }
-      } catch (error: any) {
+      } else {
+        const error = result.reason;
         errors.push({
           periodo,
           error: error.message,
@@ -429,7 +484,7 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
         },
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
@@ -490,12 +545,12 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
           'Content-Type': 'application/json; charset=UTF-8',
           'User-Agent': 'okhttp/4.12.0',
         },
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
-    // Esperar 3 segundos
-    await sleep(3000);
+    // Esperar 1.5 segundos (optimizado)
+    await sleep(1500);
 
     // Request 2: Obtener resumen
     const response2 = await axios.post(
@@ -509,7 +564,7 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
         },
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 
@@ -556,7 +611,7 @@ export const buscarCreditoPorNSS = async (nss: string, userId: string): Promise<
           'Content-Type': 'application/json',
           'User-Agent': 'okhttp/5.1.0',
         },
-        timeout: 30000,
+        timeout: 15000,
       }
     );
 

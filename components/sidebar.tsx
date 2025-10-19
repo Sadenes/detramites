@@ -23,7 +23,8 @@ import { Button } from "@/components/ui/button"
 export function Sidebar() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   if (!user) return null
 
@@ -93,17 +94,27 @@ export function Sidebar() {
     <>
       {/* Mobile menu button */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={() => setMobileOpen(!mobileOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white"
       >
         <Menu className="w-6 h-6" />
       </button>
 
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30"
+        />
+      )}
+
       {/* Sidebar */}
       <aside
         className={cn(
           "fixed left-0 top-0 h-screen bg-black/95 backdrop-blur-md border-r border-white/10 transition-all duration-300 z-40",
-          collapsed ? "w-0 lg:w-20" : "w-64",
+          "lg:block",
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          collapsed ? "lg:w-20 w-64" : "w-64",
           "max-lg:shadow-2xl",
         )}
       >
@@ -139,6 +150,7 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setMobileOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
                     isActive

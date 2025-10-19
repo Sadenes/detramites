@@ -21,6 +21,7 @@ import {
   Loader2,
   X,
   FileStack,
+  ArrowLeft,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { infonavitApi, downloadPDF } from "@/lib/api"
@@ -236,15 +237,16 @@ export default function ConsultasPage() {
                   Cambio de Contraseña
                 </CardTitle>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setSelectedService(null)
                     setResult(null)
                   }}
-                  className="text-white/70 hover:text-white"
+                  className="text-white/70 hover:text-white border-white/20 hover:bg-white/10"
                 >
-                  <X className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Realizar otra consulta
                 </Button>
               </div>
               <CardDescription className="text-white/70">
@@ -328,15 +330,16 @@ export default function ConsultasPage() {
                   Desvinculación de Dispositivo
                 </CardTitle>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setSelectedService(null)
                     setResult(null)
                   }}
-                  className="text-white/70 hover:text-white"
+                  className="text-white/70 hover:text-white border-white/20 hover:bg-white/10"
                 >
-                  <X className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Realizar otra consulta
                 </Button>
               </div>
               <CardDescription className="text-white/70">
@@ -424,15 +427,16 @@ export default function ConsultasPage() {
                   Consultar Avisos
                 </CardTitle>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setSelectedService(null)
                     setResult(null)
                   }}
-                  className="text-white/70 hover:text-white"
+                  className="text-white/70 hover:text-white border-white/20 hover:bg-white/10"
                 >
-                  <X className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Realizar otra consulta
                 </Button>
               </div>
               <CardDescription className="text-white/70">
@@ -507,15 +511,16 @@ export default function ConsultasPage() {
                   Estado de Cuenta Histórico
                 </CardTitle>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setSelectedService(null)
                     setResult(null)
                   }}
-                  className="text-white/70 hover:text-white"
+                  className="text-white/70 hover:text-white border-white/20 hover:bg-white/10"
                 >
-                  <X className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Realizar otra consulta
                 </Button>
               </div>
               <CardDescription className="text-white/70">Obtén el historial completo del crédito</CardDescription>
@@ -585,16 +590,17 @@ export default function ConsultasPage() {
                   Estado de Cuenta Mensual
                 </CardTitle>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setSelectedService(null)
                     setResult(null)
                     setSelectedPeriods([])
                   }}
-                  className="text-white/70 hover:text-white"
+                  className="text-white/70 hover:text-white border-white/20 hover:bg-white/10"
                 >
-                  <X className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Realizar otra consulta
                 </Button>
               </div>
               <CardDescription className="text-white/70">
@@ -720,15 +726,16 @@ export default function ConsultasPage() {
                   Resumen de Movimientos
                 </CardTitle>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setSelectedService(null)
                     setResult(null)
                   }}
-                  className="text-white/70 hover:text-white"
+                  className="text-white/70 hover:text-white border-white/20 hover:bg-white/10"
                 >
-                  <X className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Realizar otra consulta
                 </Button>
               </div>
               <CardDescription className="text-white/70">
@@ -808,15 +815,16 @@ export default function ConsultasPage() {
                   Estatus de Crédito
                 </CardTitle>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setSelectedService(null)
                     setResult(null)
                   }}
-                  className="text-white/70 hover:text-white"
+                  className="text-white/70 hover:text-white border-white/20 hover:bg-white/10"
                 >
-                  <X className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Realizar otra consulta
                 </Button>
               </div>
               <CardDescription className="text-white/70">Consulta información completa del crédito</CardDescription>
