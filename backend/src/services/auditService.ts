@@ -61,8 +61,10 @@ export const getAuditLogs = async (filters?: {
     userId: query.userId,
     api: 'INFONAVIT', // Por ahora solo tenemos INFONAVIT
     endpoint: query.endpoint,
-    status: query.status === 'COMPLETED' ? 'success' : 'failed',
-    responseTime: query.updatedAt ? `${Math.round((query.updatedAt.getTime() - query.createdAt.getTime()) / 1000)}s` : 'N/A',
+    status: query.status === 'COMPLETED' ? 'success' : query.status === 'PENDING' ? 'pending' : 'failed',
+    responseTime: query.updatedAt && query.status === 'COMPLETED'
+      ? `${Math.round((query.updatedAt.getTime() - query.createdAt.getTime()))}ms`
+      : 'N/A',
     createdAt: query.createdAt,
     user: query.user,
   }));

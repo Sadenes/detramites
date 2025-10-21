@@ -13,7 +13,8 @@
     "prisma:studio": "prisma studio",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:production": "ts-node src/scripts/seed-production.ts",
-    "check": "ts-node src/scripts/check-setup.ts"
+    "check": "ts-node src/scripts/check-setup.ts",
+    "migrate:ipv4": "ts-node src/scripts/migrateIPv6ToIPv4.ts"
   },
   "keywords": [
     "infonavit",
