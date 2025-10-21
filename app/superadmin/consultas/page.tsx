@@ -21,11 +21,14 @@ import {
   Loader2,
   X,
   FileStack,
+  ArrowLeft,
+  UserCheck,
+  Shield,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { infonavitApi, downloadPDF } from "@/lib/api"
 
-type ConsultationService = "password" | "device" | "notices" | "historical" | "monthly" | "status" | "summary" | null
+type ConsultationService = "password" | "device" | "notices" | "historical" | "monthly" | "status" | "summary" | "contact" | "verification" | null
 
 export default function ConsultasPage() {
   const { user } = useAuth()
@@ -94,6 +97,37 @@ export default function ConsultasPage() {
         case "summary":
           response = await infonavitApi.resumenMovimientos(inputValue)
           setResult({ type: "summary", data: response })
+          break
+
+        case "contact":
+          // Simulación de consulta de datos de contacto
+          response = {
+            message: "Datos de contacto obtenidos exitosamente",
+            contactData: {
+              nss: inputValue,
+              nombre: "JUAN PÉREZ GARCÍA",
+              telefono: "55-1234-5678",
+              email: "juan.perez@example.com",
+              direccion: "Calle Principal #123, Col. Centro, CDMX"
+            }
+          }
+          setResult({ type: "contact", data: response })
+          break
+
+        case "verification":
+          // Simulación de verificación de cuenta
+          response = {
+            message: "Verificación de cuenta completada",
+            verificationData: {
+              nss: inputValue,
+              estadoCuenta: "ACTIVA",
+              tieneCredito: true,
+              numeroCredito: "1234567890",
+              fechaUltimaActualizacion: new Date().toLocaleDateString('es-MX'),
+              estatusVerificacion: "VERIFICADO"
+            }
+          }
+          setResult({ type: "verification", data: response })
           break
       }
     } catch (err: any) {
@@ -213,6 +247,22 @@ export default function ConsultasPage() {
       description: "Historial completo de movimientos",
       color: "from-teal-500/20 to-cyan-500/20",
       borderColor: "border-teal-500/30",
+    },
+    {
+      id: "contact" as ConsultationService,
+      icon: UserCheck,
+      title: "Consulta datos de contacto",
+      description: "Consultar datos de contacto de un derechohabiente",
+      color: "from-rose-500/20 to-pink-500/20",
+      borderColor: "border-rose-500/30",
+    },
+    {
+      id: "verification" as ConsultationService,
+      icon: Shield,
+      title: "Verificación de Cuenta",
+      description: "Verifica el estado real de tu cuenta",
+      color: "from-violet-500/20 to-purple-500/20",
+      borderColor: "border-violet-500/30",
     },
   ]
 
@@ -900,6 +950,206 @@ export default function ConsultasPage() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-red-400">
+                    <X className="w-5 h-5" />
+                    <span className="font-medium">{error}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
+
+      case "contact":
+        return (
+          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <UserCheck className="w-5 h-5" />
+                  Consulta datos de contacto
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedService(null)
+                    setResult(null)
+                  }}
+                  className="text-white/70 hover:text-white"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver
+                </Button>
+              </div>
+              <CardDescription className="text-white/70">
+                Consultar datos de contacto de un derechohabiente
+              </CardDescription>
+              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nss-contact" className="text-white">
+                  NSS (Número de Seguro Social)
+                </Label>
+                <Input
+                  id="nss-contact"
+                  placeholder="Ej: 47937648609"
+                  className="bg-white/10 border-white/20 text-white"
+                  maxLength={11}
+                />
+              </div>
+              <Button
+                onClick={(e) => {
+                  const input = document.getElementById("nss-contact") as HTMLInputElement
+                  handleQuery("contact", input.value)
+                }}
+                disabled={loading}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Consultar Datos de Contacto
+              </Button>
+
+              {result?.type === "contact" && (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-green-400 mb-4">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="font-medium">{result.data.message}</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">NSS</p>
+                      <p className="text-white font-medium">{result.data.contactData.nss}</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">Nombre Completo</p>
+                      <p className="text-white font-medium">{result.data.contactData.nombre}</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">Teléfono</p>
+                      <p className="text-white font-medium">{result.data.contactData.telefono}</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">Correo Electrónico</p>
+                      <p className="text-white font-medium">{result.data.contactData.email}</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">Dirección</p>
+                      <p className="text-white font-medium">{result.data.contactData.direccion}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-red-400">
+                    <X className="w-5 h-5" />
+                    <span className="font-medium">{error}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
+
+      case "verification":
+        return (
+          <Card className="bg-white/5 backdrop-blur-md border-white/10">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Verificación de Cuenta
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedService(null)
+                    setResult(null)
+                  }}
+                  className="text-white/70 hover:text-white"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver
+                </Button>
+              </div>
+              <CardDescription className="text-white/70">
+                Verifica el estado real de tu cuenta
+              </CardDescription>
+              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nss-verification" className="text-white">
+                  NSS (Número de Seguro Social)
+                </Label>
+                <Input
+                  id="nss-verification"
+                  placeholder="Ej: 47937648609"
+                  className="bg-white/10 border-white/20 text-white"
+                  maxLength={11}
+                />
+              </div>
+              <Button
+                onClick={(e) => {
+                  const input = document.getElementById("nss-verification") as HTMLInputElement
+                  handleQuery("verification", input.value)
+                }}
+                disabled={loading}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Verificar Cuenta
+              </Button>
+
+              {result?.type === "verification" && (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-green-400 mb-4">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="font-medium">{result.data.message}</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">NSS</p>
+                      <p className="text-white font-medium">{result.data.verificationData.nss}</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">Estado de Cuenta</p>
+                      <Badge className="bg-green-500 text-white">
+                        {result.data.verificationData.estadoCuenta}
+                      </Badge>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">¿Tiene Crédito?</p>
+                      <Badge className={result.data.verificationData.tieneCredito ? "bg-green-500 text-white" : "bg-red-500 text-white"}>
+                        {result.data.verificationData.tieneCredito ? "SÍ" : "NO"}
+                      </Badge>
+                    </div>
+                    {result.data.verificationData.tieneCredito && (
+                      <div className="p-3 bg-white/5 rounded-lg">
+                        <p className="text-white/60 text-xs mb-1">Número de Crédito</p>
+                        <p className="text-white font-medium">{result.data.verificationData.numeroCredito}</p>
+                      </div>
+                    )}
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">Fecha Última Actualización</p>
+                      <p className="text-white font-medium">{result.data.verificationData.fechaUltimaActualizacion}</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/60 text-xs mb-1">Estatus de Verificación</p>
+                      <Badge className="bg-blue-500 text-white">
+                        {result.data.verificationData.estatusVerificacion}
+                      </Badge>
                     </div>
                   </div>
                 </div>
