@@ -121,7 +121,7 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-4 border-b border-white/10 flex items-center justify-between">
-            {!collapsed && (
+            {(!collapsed || mobileOpen) && (
               <div className="flex flex-col gap-1">
                 <h2 className="text-white font-bold text-xl tracking-tight">Detramites</h2>
                 <span className={cn("text-xs px-2 py-0.5 rounded-full text-white w-fit", roleBadge.color)}>
@@ -129,7 +129,7 @@ export function Sidebar() {
                 </span>
               </div>
             )}
-            {collapsed && (
+            {collapsed && !mobileOpen && (
               <div className="flex justify-center w-full">
                 <span className="text-white font-bold text-lg">D</span>
               </div>
@@ -159,7 +159,7 @@ export function Sidebar() {
                   )}
                 >
                   <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
+                  {(!collapsed || mobileOpen) && <span className="text-sm font-medium">{item.label}</span>}
                 </Link>
               )
             })}
@@ -167,7 +167,7 @@ export function Sidebar() {
 
           {/* User info & logout */}
           <div className="p-4 border-t border-white/10">
-            {!collapsed && (
+            {(!collapsed || mobileOpen) && (
               <div className="mb-3 px-3 py-2 bg-white/5 rounded-lg">
                 <p className="text-white text-sm font-medium truncate">{user.username}</p>
                 <p className="text-white/50 text-xs truncate">{user.email}</p>
@@ -176,10 +176,10 @@ export function Sidebar() {
             <Button
               onClick={logout}
               variant="ghost"
-              className={cn("w-full text-white/70 hover:text-white hover:bg-red-500/20", collapsed && "px-2")}
+              className={cn("w-full text-white/70 hover:text-white hover:bg-red-500/20", collapsed && !mobileOpen && "px-2")}
             >
               <LogOut className="w-5 h-5" />
-              {!collapsed && <span className="ml-2">Cerrar Sesión</span>}
+              {(!collapsed || mobileOpen) && <span className="ml-2">Cerrar Sesión</span>}
             </Button>
           </div>
         </div>
