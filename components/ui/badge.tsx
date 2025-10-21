@@ -5,20 +5,26 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const badgeVariants = cva(
-  'inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none transition-smooth overflow-hidden',
+  'inline-flex items-center justify-center rounded-md px-2.5 py-1 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none transition-smooth overflow-hidden backdrop-blur-sm',
   {
     variants: {
       variant: {
         default:
-          'glass backdrop-blur-sm text-foreground',
+          'bg-white/10 border border-white/30 text-foreground',
         secondary:
-          'glass backdrop-blur-sm text-muted-foreground',
+          'bg-muted/10 border border-muted/30 text-muted-foreground',
         destructive:
-          'bg-destructive/20 text-destructive-foreground backdrop-blur-sm border border-destructive/30',
+          'bg-destructive/10 border border-destructive/30 text-destructive',
         outline:
-          'border border-subtle text-foreground [a&]:hover:border-subtle-hover backdrop-blur-sm',
+          'bg-transparent border border-white/30 text-foreground [a&]:hover:border-white/50',
         accent:
-          'bg-accent/20 text-accent-foreground backdrop-blur-sm border border-accent/30',
+          'bg-accent/10 border border-accent/30 text-accent',
+        success:
+          'bg-green-500/10 border border-green-500/30 text-green-400',
+        warning:
+          'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400',
+        info:
+          'bg-blue-500/10 border border-blue-500/30 text-blue-400',
       },
     },
     defaultVariants: {
