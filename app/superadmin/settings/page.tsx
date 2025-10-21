@@ -59,28 +59,6 @@ export default function SettingsPage() {
             </Card>
           )}
 
-          {/* System Limits */}
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white">Límites del Sistema</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-white">Máximo de API Keys por Usuario</Label>
-                <Input type="number" defaultValue="3" className="bg-white/10 border-white/20 text-white" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white">Rate Limit (consultas por hora)</Label>
-                <Input type="number" defaultValue="100" className="bg-white/10 border-white/20 text-white" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white">Créditos mínimos para upgrade a distribuidor</Label>
-                <Input type="number" defaultValue="1000" className="bg-white/10 border-white/20 text-white" />
-              </div>
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white">Guardar Cambios</Button>
-            </CardContent>
-          </Card>
-
           {/* API Configuration */}
           <Card className="bg-white/5 backdrop-blur-md border-white/10">
             <CardHeader>
@@ -108,42 +86,6 @@ export default function SettingsPage() {
                 </div>
                 <Switch />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Pricing Plans */}
-          <Card className="bg-white/5 backdrop-blur-md border-white/10">
-            <CardHeader>
-              <CardTitle className="text-white">Planes y Precios</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 bg-white/5 rounded-lg">
-                <p className="text-white font-medium mb-2">Plan Emprendedor</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-white text-sm">Créditos</Label>
-                    <Input type="number" defaultValue="100" className="bg-white/10 border-white/20 text-white" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-white text-sm">Precio (MXN)</Label>
-                    <Input type="number" defaultValue="2500" className="bg-white/10 border-white/20 text-white" />
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 bg-white/5 rounded-lg">
-                <p className="text-white font-medium mb-2">Plan Mayorista</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-white text-sm">Créditos</Label>
-                    <Input type="number" defaultValue="1100" className="bg-white/10 border-white/20 text-white" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-white text-sm">Precio (MXN)</Label>
-                    <Input type="number" defaultValue="10000" className="bg-white/10 border-white/20 text-white" />
-                  </div>
-                </div>
-              </div>
-              <Button className="bg-orange-500 hover:bg-orange-600 text-white">Actualizar Precios</Button>
             </CardContent>
           </Card>
         </div>
