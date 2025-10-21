@@ -24,11 +24,13 @@ interface Query {
   id: string
   userId: string
   api: string
+  endpoint: string
   status: string
   responseTime: string
   createdAt: string
   user?: {
     email?: string
+    username?: string
   }
 }
 
@@ -182,22 +184,51 @@ export default function SuperadminDashboard() {
               <CardContent>
                 {queries.length > 0 ? (
                   <div className="space-y-3">
-                    {queries.slice(0, 5).map((query) => (
-                      <div key={query.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                        <div>
-                          <p className="text-white text-sm font-medium">{query.user?.email || 'Usuario desconocido'}</p>
-                          <p className="text-white/60 text-xs">{query.api}</p>
+                    {queries.slice(0, 5).map((query) => {
+                      const queryDate = new Date(query.createdAt)
+                      const timeString = queryDate.toLocaleTimeString('es-MX', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })
+                      const dateString = queryDate.toLocaleDateString('es-MX', {
+                        day: '2-digit',
+                        month: 'short'
+                      })
+
+                      // Formatear el nombre de la API de manera más legible
+                      const apiName = query.api === 'INFONAVIT' ? 'Infonavit' : query.api
+                      const endpointName = query.endpoint
+                        ? query.endpoint.replace(/\//g, ' ').replace(/-/g, ' ').trim()
+                        : 'Consulta general'
+
+                      return (
+                        <div key={query.id} className="flex items-start justify-between p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                          <div className="flex-1">
+                            <p className="text-white text-sm font-medium">
+                              {query.user?.username || query.user?.email || 'Usuario desconocido'}
+                            </p>
+                            <p className="text-white/70 text-xs mt-1">
+                              <span className="text-orange-400 font-medium">{apiName}</span>
+                              {query.endpoint && <span className="text-white/50"> • {endpointName}</span>}
+                            </p>
+                            <p className="text-white/50 text-xs mt-1">
+                              {timeString} • {dateString}
+                            </p>
+                          </div>
+                          <div className="text-right ml-3">
+                            <Badge
+                              className={query.status === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
+                            >
+                              {query.status === "success" ? "Éxito" : "Error"}
+                            </Badge>
+                            {query.responseTime && (
+                              <p className="text-white/60 text-xs mt-1">{query.responseTime}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <Badge
-                            className={query.status === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}
-                          >
-                            {query.status}
-                          </Badge>
-                          <p className="text-white/60 text-xs mt-1">{query.responseTime || 'N/A'}</p>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <p className="text-white/60 text-center py-8">No hay consultas recientes</p>

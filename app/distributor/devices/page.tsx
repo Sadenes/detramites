@@ -81,6 +81,29 @@ export default function DevicesPage() {
     return <Monitor className="w-6 h-6 text-blue-400" />
   }
 
+  // Convertir IPv6 a IPv4 cuando sea posible
+  const formatIpAddress = (ip: string): string => {
+    if (!ip) return 'Desconocida'
+
+    // Si es IPv6 localhost, mostrar IPv4 localhost
+    if (ip === '::1' || ip === '::ffff:127.0.0.1') {
+      return '127.0.0.1'
+    }
+
+    // Si es IPv6 mapeada a IPv4 (::ffff:x.x.x.x)
+    if (ip.startsWith('::ffff:')) {
+      return ip.replace('::ffff:', '')
+    }
+
+    // Si es una IPv6 completa, intentar mostrar una versión más corta
+    if (ip.includes(':') && !ip.includes('.')) {
+      // Para otras IPv6, mostrar versión acortada
+      return ip.replace(/\b0+/g, '0').replace(/:{2,}/g, '::')
+    }
+
+    return ip
+  }
+
   if (loading) {
     return (
       <ProtectedRoute allowedRoles={["distributor", "DISTRIBUTOR"]}>
@@ -132,7 +155,7 @@ export default function DevicesPage() {
                           <p className="text-white font-medium">
                             {session.browser || "Navegador"} en {session.os || "Sistema"}
                           </p>
-                          <p className="text-white/60 text-sm">IP: {session.ipAddress}</p>
+                          <p className="text-white/60 text-sm">IP: {formatIpAddress(session.ipAddress)}</p>
                           <p className="text-white/60 text-xs">
                             Última actividad: {new Date(session.lastActivity).toLocaleString()}
                           </p>

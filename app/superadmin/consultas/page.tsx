@@ -312,7 +312,7 @@ export default function ConsultasPage() {
               <CardDescription className="text-white/70">
                 Genera una nueva contraseña para el NSS proporcionado
               </CardDescription>
-              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+              <Badge className="bg-white/5 backdrop-blur-sm text-white/90 border border-white/20 w-fit">Costo: 1 crédito</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -404,7 +404,7 @@ export default function ConsultasPage() {
               <CardDescription className="text-white/70">
                 Permite al usuario iniciar sesión en un nuevo dispositivo
               </CardDescription>
-              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+              <Badge className="bg-white/5 backdrop-blur-sm text-white/90 border border-white/20 w-fit">Costo: 1 crédito</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -500,7 +500,7 @@ export default function ConsultasPage() {
               <CardDescription className="text-white/70">
                 Consulta avisos de suspensión, retención y modificación
               </CardDescription>
-              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+              <Badge className="bg-white/5 backdrop-blur-sm text-white/90 border border-white/20 w-fit">Costo: 1 crédito</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -581,7 +581,7 @@ export default function ConsultasPage() {
                 </Button>
               </div>
               <CardDescription className="text-white/70">Obtén el historial completo del crédito</CardDescription>
-              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+              <Badge className="bg-white/5 backdrop-blur-sm text-white/90 border border-white/20 w-fit">Costo: 1 crédito</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -796,7 +796,7 @@ export default function ConsultasPage() {
               <CardDescription className="text-white/70">
                 Obtén el historial completo de movimientos del trabajador
               </CardDescription>
-              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+              <Badge className="bg-white/5 backdrop-blur-sm text-white/90 border border-white/20 w-fit">Costo: 1 crédito</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -882,7 +882,7 @@ export default function ConsultasPage() {
                 </Button>
               </div>
               <CardDescription className="text-white/70">Consulta información completa del crédito</CardDescription>
-              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+              <Badge className="bg-white/5 backdrop-blur-sm text-white/90 border border-white/20 w-fit">Costo: 1 crédito</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -1010,7 +1010,7 @@ export default function ConsultasPage() {
               <CardDescription className="text-white/70">
                 Consultar datos de contacto de un derechohabiente
               </CardDescription>
-              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+              <Badge className="bg-white/5 backdrop-blur-sm text-white/90 border border-white/20 w-fit">Costo: 1 crédito</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -1104,7 +1104,7 @@ export default function ConsultasPage() {
               <CardDescription className="text-white/70">
                 Verifica el estado real de tu cuenta
               </CardDescription>
-              <Badge className="bg-orange-500 text-white w-fit">Costo: 1 crédito</Badge>
+              <Badge className="bg-white/5 backdrop-blur-sm text-white/90 border border-white/20 w-fit">Costo: 1 crédito</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -1218,7 +1218,7 @@ export default function ConsultasPage() {
                         <div className="p-3 rounded-lg bg-white/10 backdrop-blur-sm">
                           <Icon className="w-6 h-6 text-white" />
                         </div>
-                        <Badge className="bg-orange-500 text-white text-xs">1 crédito</Badge>
+                        <Badge className="bg-white/5 backdrop-blur-sm text-white/90 text-xs border border-white/20">1 crédito</Badge>
                       </div>
 
                       {/* Content */}
