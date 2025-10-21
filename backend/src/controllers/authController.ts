@@ -6,11 +6,12 @@ import { LoginResponse } from '../types';
 import { logAudit } from '../services/auditService';
 import { createSession, logFailedLogin, isIPBlocked, closeSession } from '../services/monitoringService';
 import * as UAParser from 'ua-parser-js';
+import { getClientIP } from '../utils/ipHelper';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, password } = req.body;
-    const ipAddress = req.ip || 'unknown';
+    const ipAddress = getClientIP(req);
     const userAgent = req.get('user-agent') || 'unknown';
 
     // Verificar si la IP está bloqueada
@@ -108,7 +109,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     if (token) {
       try {
         const payload: any = jwt.verify(token, process.env.JWT_SECRET!);
-        await logAudit('LOGOUT', payload.userId, {}, req.ip);
+        await logAudit('LOGOUT', payload.userId, {}, getClientIP(req));
         // Cerrar sesión en la base de datos
         await closeSession(token);
       } catch (error) {

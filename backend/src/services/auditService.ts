@@ -36,11 +36,13 @@ export const getAuditLogs = async (filters?: {
     where.action = filters.action;
   }
 
-  const logs = await prisma.auditLog.findMany({
-    where,
+  // Obtener logs de consultas API en lugar de audit logs
+  const queries = await prisma.apiQuery.findMany({
+    where: filters?.userId ? { userId: filters.userId } : {},
     include: {
       user: {
         select: {
+          id: true,
           username: true,
           role: true,
         },
@@ -53,5 +55,15 @@ export const getAuditLogs = async (filters?: {
     skip: filters?.offset || 0,
   });
 
-  return logs;
+  // Formatear las consultas para que coincidan con el formato esperado por el frontend
+  return queries.map(query => ({
+    id: query.id,
+    userId: query.userId,
+    api: 'INFONAVIT', // Por ahora solo tenemos INFONAVIT
+    endpoint: query.endpoint,
+    status: query.status === 'COMPLETED' ? 'success' : 'failed',
+    responseTime: query.updatedAt ? `${Math.round((query.updatedAt.getTime() - query.createdAt.getTime()) / 1000)}s` : 'N/A',
+    createdAt: query.createdAt,
+    user: query.user,
+  }));
 };
