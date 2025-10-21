@@ -8,14 +8,60 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
-// Obtener token del localStorage
+// Obtener token del localStorage o sessionStorage
 const getToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
+
+  const rememberMe = localStorage.getItem('rememberMe') === 'true';
+  if (rememberMe) {
+    return localStorage.getItem('token');
+  } else {
+    return sessionStorage.getItem('token');
+  }
 };
 
-// Helper para hacer requests autenticados
-const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
+// Guardar token en el storage correspondiente
+const saveToken = (token: string): void => {
+  if (typeof window === 'undefined') return;
+
+  const rememberMe = localStorage.getItem('rememberMe') === 'true';
+  if (rememberMe) {
+    localStorage.setItem('token', token);
+  } else {
+    sessionStorage.setItem('token', token);
+  }
+};
+
+// Intentar renovar el token
+const attemptTokenRefresh = async (): Promise<string | null> => {
+  try {
+    const currentToken = getToken();
+    if (!currentToken) return null;
+
+    const response = await fetch(`${API_URL}/api/auth/refresh-token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${currentToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success && data.token) {
+      saveToken(data.token);
+      return data.token;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    return null;
+  }
+};
+
+// Helper para hacer requests autenticados con auto-renovación de token
+const fetchWithAuth = async (endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<any> => {
   const token = getToken();
 
   const headers: HeadersInit = {
@@ -31,6 +77,27 @@ const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
     ...options,
     headers,
   });
+
+  // Si el token expiró (401) y no hemos intentado renovarlo aún
+  if (response.status === 401 && retryCount === 0) {
+    const newToken = await attemptTokenRefresh();
+
+    if (newToken) {
+      // Reintentar la petición con el nuevo token
+      return fetchWithAuth(endpoint, options, retryCount + 1);
+    } else {
+      // Si no se pudo renovar, redirigir al login
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('rememberMe');
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+      throw new Error('Sesión expirada. Por favor inicia sesión nuevamente.');
+    }
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Error en la petición' }));

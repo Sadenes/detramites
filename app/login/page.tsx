@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Checkbox } from "@/components/ui/checkbox"
 import { AlertCircle, Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -23,7 +25,7 @@ export default function LoginPage() {
     setError("")
     setIsLoading(true)
 
-    const success = await login(username, password)
+    const success = await login(username, password, rememberMe)
 
     if (!success) {
       setError("Usuario o contraseña incorrectos")
@@ -133,6 +135,21 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  className="border-white/20 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                />
+                <Label
+                  htmlFor="rememberMe"
+                  className="text-white/80 text-sm font-normal cursor-pointer hover:text-white transition-colors"
+                >
+                  Recordarme en este dispositivo
+                </Label>
               </div>
 
               {error && (
