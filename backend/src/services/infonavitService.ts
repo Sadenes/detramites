@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { scrapflyJsonRequest, scrapflyXmlRequest } from './scrapflyService';
 import { parseStringPromise } from 'xml2js';
+import playwrightService from './playwrightService';
 
 // Agente HTTPS que ignora certificados autofirmados
 const httpsAgent = new https.Agent({
@@ -72,7 +73,7 @@ const handleQueryError = async (
   }
 };
 
-// 1. CAMBIAR CONTRASEÑA (MIGRADO A SCRAPFLY)
+// 1. CAMBIAR CONTRASEÑA (MIGRADO A PLAYWRIGHT)
 export const cambiarPassword = async (nss: string, userId: string): Promise<any> => {
   const newPassword = nss + generateRandomChars(4);
 
@@ -87,19 +88,24 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
   });
 
   try {
-    const response = await scrapflyJsonRequest(
+    const result = await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/CambiarPwdMailSDS',
       {
-        ID_CAT_APP: 'APL0211',
-        grupo: 'cn=GS_MICUENTA,ou=atencionservicios,ou=areasapoyo,O=INFONAVIT',
-        usuario: nss,
-        valor: newPassword,
-      },
-      {
-        'Content-Type': 'application/json; charset=utf-8',
-        'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+        method: 'POST',
+        body: {
+          ID_CAT_APP: 'APL0211',
+          grupo: 'cn=GS_MICUENTA,ou=atencionservicios,ou=areasapoyo,O=INFONAVIT',
+          usuario: nss,
+          valor: newPassword,
+        },
+        headers: {
+          'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+          'User-Agent': 'okhttp/5.1.0',
+        },
       }
     );
+
+    const response = JSON.parse(result.data);
 
     await prisma.apiQuery.update({
       where: { id: queryRecord.id },
@@ -588,7 +594,7 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
   }
 };
 
-// 8. VERIFICACIÓN DE CUENTA (GRATIS - NO CONSUME CRÉDITOS)
+// 8. VERIFICACIÓN DE CUENTA (GRATIS - NO CONSUME CRÉDITOS) - PLAYWRIGHT
 export const verificarCuenta = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -612,14 +618,20 @@ export const verificarCuenta = async (nss: string, userId: string): Promise<any>
    </soapenv:Body>
 </soapenv:Envelope>`;
 
-    const xmlResponse = await scrapflyXmlRequest(
+    const response = await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/wps/MCI2-RegistroWS/jaxservicesNT',
-      soapEnvelope,
       {
-        'Accept-Charset': 'utf-8',
-        'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+        method: 'POST',
+        body: soapEnvelope,
+        headers: {
+          'Accept-Charset': 'utf-8',
+          'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+        },
+        isXml: true,
       }
     );
+
+    const xmlResponse = response.data;
 
     // Parsear XML a JSON
     const parsed = await parseStringPromise(xmlResponse, { explicitArray: false });
@@ -666,7 +678,7 @@ export const verificarCuenta = async (nss: string, userId: string): Promise<any>
   }
 };
 
-// 9. CONSULTA DATOS DE CONTACTO
+// 9. CONSULTA DATOS DE CONTACTO - PLAYWRIGHT
 export const consultarDatosContacto = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -679,16 +691,22 @@ export const consultarDatosContacto = async (nss: string, userId: string): Promi
   });
 
   try {
-    const response = await scrapflyJsonRequest(
+    const result = await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/sndConsultaDatosContactoNT',
       {
-        nss,
-        canalConsulta: 'Z4',
-      },
-      {
-        'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+        method: 'POST',
+        body: {
+          nss,
+          canalConsulta: 'Z4',
+        },
+        headers: {
+          'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+          'User-Agent': 'okhttp/5.1.0',
+        },
       }
     );
+
+    const response = JSON.parse(result.data);
 
     // Formatear respuesta en tabla
     const datosPrincipales = response.datosPrincipales?.[0] || {};
