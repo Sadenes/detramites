@@ -7,6 +7,8 @@ import prisma from '../utils/prisma';
 import { QueryStatus } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { scrapflyJsonRequest, scrapflyXmlRequest } from './scrapflyService';
+import { parseStringPromise } from 'xml2js';
 
 // Agente HTTPS que ignora certificados autofirmados
 const httpsAgent = new https.Agent({
@@ -70,7 +72,7 @@ const handleQueryError = async (
   }
 };
 
-// 1. CAMBIAR CONTRASEÑA
+// 1. CAMBIAR CONTRASEÑA (MIGRADO A SCRAPFLY)
 export const cambiarPassword = async (nss: string, userId: string): Promise<any> => {
   const newPassword = nss + generateRandomChars(4);
 
@@ -85,7 +87,7 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
   });
 
   try {
-    const response = await axios.post(
+    const response = await scrapflyJsonRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/CambiarPwdMailSDS',
       {
         ID_CAT_APP: 'APL0211',
@@ -94,12 +96,8 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
         valor: newPassword,
       },
       {
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'User-Agent': getRandomUserAgent(),
-          'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
-        },
-        timeout: 15000,
+        'Content-Type': 'application/json; charset=utf-8',
+        'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
       }
     );
 
@@ -107,7 +105,7 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
       where: { id: queryRecord.id },
       data: {
         status: QueryStatus.COMPLETED,
-        response: response.data,
+        response: response,
       },
     });
 
@@ -115,7 +113,7 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
       success: true,
       newPassword,
       message: 'Contraseña actualizada correctamente',
-      response: response.data,
+      response,
     };
   } catch (error: any) {
     await handleQueryError(queryRecord.id, userId, 1, error);
@@ -583,6 +581,157 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
         data: response2.data.pdf,
       },
       response: response2.data,
+    };
+  } catch (error: any) {
+    await handleQueryError(queryRecord.id, userId, 1, error);
+    throw error;
+  }
+};
+
+// 8. VERIFICACIÓN DE CUENTA (GRATIS - NO CONSUME CRÉDITOS)
+export const verificarCuenta = async (nss: string, userId: string): Promise<any> => {
+  const queryRecord = await prisma.apiQuery.create({
+    data: {
+      userId,
+      endpoint: '/infonavit/verificar-cuenta',
+      status: QueryStatus.PENDING,
+      request: { nss },
+      creditCost: 0, // GRATIS
+    },
+  });
+
+  try {
+    const soapEnvelope = `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:mci2="http://mci2-registro.jaxws.infonavit.org.mx">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <mci2:validaNss>
+         <arg0>
+            <nss>${nss}</nss>
+         </arg0>
+      </mci2:validaNss>
+   </soapenv:Body>
+</soapenv:Envelope>`;
+
+    const xmlResponse = await scrapflyXmlRequest(
+      'https://serviciosweb.infonavit.org.mx/wps/MCI2-RegistroWS/jaxservicesNT',
+      soapEnvelope,
+      {
+        'Accept-Charset': 'utf-8',
+        'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+      }
+    );
+
+    // Parsear XML a JSON
+    const parsed = await parseStringPromise(xmlResponse, { explicitArray: false });
+    const returnData = parsed['S:Envelope']['S:Body']['ns2:validaNssResponse']['return'];
+
+    // Formatear respuesta en tabla
+    const tabla = {
+      'Código': returnData.codigo || 'N/A',
+      'Descripción': returnData.descripcion || 'N/A',
+      'NSS (Respuesta)': returnData.nss || 'N/A',
+      'Paso Actual': returnData.pasoActual || 'N/A',
+      'Apellido Materno': returnData.usuario?.apellidoMaterno || 'N/A',
+      'Apellido Paterno': returnData.usuario?.apellidoPaterno || 'N/A',
+      'CURP': returnData.usuario?.curp || 'N/A',
+      'Existe en LDAP': returnData.usuario?.existeEnLdap || 'N/A',
+      'Nombre': returnData.usuario?.nombre || 'N/A',
+      'NSS': returnData.usuario?.nss || 'N/A',
+      'Perdió Código Verificador': returnData.usuario?.perdioCodigoVerificador || 'N/A',
+      'RFC': returnData.usuario?.rfc || 'N/A',
+    };
+
+    await prisma.apiQuery.update({
+      where: { id: queryRecord.id },
+      data: {
+        status: QueryStatus.COMPLETED,
+        response: { tabla },
+      },
+    });
+
+    return {
+      success: true,
+      data: tabla,
+      raw: returnData,
+    };
+  } catch (error: any) {
+    await prisma.apiQuery.update({
+      where: { id: queryRecord.id },
+      data: {
+        status: QueryStatus.FAILED,
+        errorMsg: error.message,
+      },
+    });
+    throw error;
+  }
+};
+
+// 9. CONSULTA DATOS DE CONTACTO
+export const consultarDatosContacto = async (nss: string, userId: string): Promise<any> => {
+  const queryRecord = await prisma.apiQuery.create({
+    data: {
+      userId,
+      endpoint: '/infonavit/consultar-datos-contacto',
+      status: QueryStatus.PENDING,
+      request: { nss },
+      creditCost: 1,
+    },
+  });
+
+  try {
+    const response = await scrapflyJsonRequest(
+      'https://serviciosweb.infonavit.org.mx/RESTAdapter/sndConsultaDatosContactoNT',
+      {
+        nss,
+        canalConsulta: 'Z4',
+      },
+      {
+        'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+      }
+    );
+
+    // Formatear respuesta en tabla
+    const datosPrincipales = response.datosPrincipales?.[0] || {};
+    const datosContacto = response.datosContacto?.[0] || {};
+
+    const tabla = {
+      'Cargo': response.cargo || 'N/A',
+      'Mensaje': response.mensaje || 'N/A',
+      'Nombre': datosPrincipales.nombre || 'N/A',
+      'Apellido Paterno': datosPrincipales.apPaterno || 'N/A',
+      'Apellido Materno': datosPrincipales.apMaterno || 'N/A',
+      'RFC': datosPrincipales.rfc || 'N/A',
+      'CURP': datosPrincipales.curp || 'N/A',
+      'Teléfono Celular': datosContacto.telefonoCelular || 'N/A',
+      'Teléfono Residencial': datosContacto.telefonoResidencial || 'N/A',
+      'Email Personal': datosContacto.emailPersonal || 'N/A',
+      'Email Alternativo': datosContacto.emailAlternativo || 'N/A',
+      'Nombre Referencial': datosContacto.nombreReferencial || 'N/A',
+      'Apellido Paterno Referencial': datosContacto.apPaternoReferencial || 'N/A',
+      'Apellido Materno Referencial': datosContacto.apMaternoReferencial || 'N/A',
+      'Teléfono Celular Referencial': datosContacto.telefonoCelularReferencial || 'N/A',
+      'Domicilio Calle': datosContacto.DomicilioCalle || 'N/A',
+      'Domicilio No. Exterior': datosContacto.DomicilioNoExterior || 'N/A',
+      'Domicilio No. Interior': datosContacto.DomicilioNoInterior || 'N/A',
+      'Domicilio Código Postal': datosContacto.DomicilioCodigoPostal || 'N/A',
+      'Domicilio Colonia': datosContacto.DomicilioColonia || 'N/A',
+      'Domicilio Delegación': datosContacto.DomicilioDelegacion || 'N/A',
+      'Domicilio Estado República': datosContacto.DomicilioEstadoRepublica || 'N/A',
+      'Domicilio ID Estado República': datosContacto.DomicilioIdEstadoRepublica || 'N/A',
+    };
+
+    await prisma.apiQuery.update({
+      where: { id: queryRecord.id },
+      data: {
+        status: QueryStatus.COMPLETED,
+        response: { tabla },
+      },
+    });
+
+    return {
+      success: true,
+      data: tabla,
+      raw: response,
     };
   } catch (error: any) {
     await handleQueryError(queryRecord.id, userId, 1, error);

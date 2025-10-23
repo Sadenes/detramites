@@ -9,6 +9,8 @@ import {
   estadoCuentaHistorico,
   resumenMovimientos,
   buscarCreditoPorNSS,
+  verificarCuenta,
+  consultarDatosContacto,
 } from '../services/infonavitService';
 
 // 1. Cambiar Contraseña
@@ -244,6 +246,62 @@ export const buscarCreditoHandler = async (req: AuthRequest, res: Response): Pro
     res.status(500).json({
       success: false,
       error: error.message || 'Error al buscar crédito',
+    });
+  }
+};
+
+// 8. Verificar Cuenta (GRATIS)
+export const verificarCuentaHandler = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { nss } = req.body;
+
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'No autenticado' });
+      return;
+    }
+
+    // NO consume créditos - GRATIS
+    const result = await verificarCuenta(nss, req.user.id);
+
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al verificar cuenta',
+    });
+  }
+};
+
+// 9. Consultar Datos de Contacto
+export const consultarDatosContactoHandler = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { nss } = req.body;
+
+    if (!req.user) {
+      res.status(401).json({ success: false, error: 'No autenticado' });
+      return;
+    }
+
+    const hasCredits = await consumeCredits(req.user.id, 1, 'Consultar datos de contacto INFONAVIT');
+
+    if (!hasCredits) {
+      res.status(400).json({
+        success: false,
+        error: 'Créditos insuficientes',
+      });
+      return;
+    }
+
+    const result = await consultarDatosContacto(nss, req.user.id);
+
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error al consultar datos de contacto',
     });
   }
 };

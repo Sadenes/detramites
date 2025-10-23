@@ -7,6 +7,8 @@ import {
   estadoCuentaHistoricoHandler,
   resumenMovimientosHandler,
   buscarCreditoHandler,
+  verificarCuentaHandler,
+  consultarDatosContactoHandler,
 } from '../controllers/infonavitController';
 import { authenticateToken } from '../middleware/auth';
 import { userRateLimiter } from '../middleware/rateLimiter';
@@ -19,6 +21,8 @@ import {
   estadoHistoricoSchema,
   resumenMovimientosSchema,
   buscarCreditoSchema,
+  verificarCuentaSchema,
+  consultarDatosContactoSchema,
 } from '../utils/validators';
 
 const router = Router();
@@ -51,5 +55,11 @@ router.post('/resumen-movimientos', validate(resumenMovimientosSchema), resumenM
 
 // 7. Buscar crédito por NSS
 router.post('/buscar-credito', validate(buscarCreditoSchema), buscarCreditoHandler);
+
+// 8. Verificar cuenta (GRATIS)
+router.post('/verificar-cuenta', validate(verificarCuentaSchema), verificarCuentaHandler);
+
+// 9. Consultar datos de contacto
+router.post('/consultar-datos-contacto', validate(consultarDatosContactoSchema), consultarDatosContactoHandler);
 
 export default router;

@@ -27,7 +27,7 @@
   "dependencies": {
     "@prisma/client": "^5.9.1",
     "adm-zip": "^0.5.10",
-    "axios": "^1.6.5",
+    "axios": "^1.12.2",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
@@ -38,6 +38,7 @@
     "pnpm": "^10.18.2",
     "ua-parser-js": "^2.0.6",
     "uuid": "^9.0.1",
+    "xml2js": "^0.6.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {

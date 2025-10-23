@@ -59,6 +59,14 @@ export const buscarCreditoSchema = z.object({
   nss: nssSchema,
 });
 
+export const verificarCuentaSchema = z.object({
+  nss: nssSchema,
+});
+
+export const consultarDatosContactoSchema = z.object({
+  nss: nssSchema,
+});
+
 // Validación de contraseña - solo caracteres seguros
 export const validatePassword = (password: string): { isValid: boolean; error?: string } => {
   if (!password || password.length < 6) {
