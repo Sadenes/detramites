@@ -394,6 +394,15 @@ export const assignCreditsToUser = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
+    // Validar amount
+    if (!amount || amount <= 0) {
+      res.status(400).json({
+        success: false,
+        error: 'La cantidad debe ser mayor a 0',
+      });
+      return;
+    }
+
     // Verificar que el usuario objetivo existe
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
@@ -433,9 +442,20 @@ export const assignCreditsToUser = async (req: AuthRequest, res: Response): Prom
 
     await logAudit('CREDITS_ASSIGNED', req.user.id, { targetUserId: userId, amount }, req.ip);
 
+    // Obtener los datos actualizados del usuario
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        credits: true,
+      },
+    });
+
     res.json({
       success: true,
       message: 'Créditos asignados exitosamente',
+      data: updatedUser,
     });
   } catch (error) {
     res.status(500).json({

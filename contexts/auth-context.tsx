@@ -28,11 +28,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Check for stored session
     if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("user")
-      const storedToken = localStorage.getItem("token")
       const rememberMe = localStorage.getItem("rememberMe") === "true"
 
-      if (storedUser && storedToken && rememberMe) {
+      let storedUser: string | null = null
+      let storedToken: string | null = null
+
+      if (rememberMe) {
+        storedUser = localStorage.getItem("user")
+        storedToken = localStorage.getItem("token")
+      } else {
+        storedUser = sessionStorage.getItem("user")
+        storedToken = sessionStorage.getItem("token")
+      }
+
+      if (storedUser && storedToken) {
         try {
           setUser(JSON.parse(storedUser))
           setToken(storedToken)
@@ -41,12 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem("user")
           localStorage.removeItem("token")
           localStorage.removeItem("rememberMe")
+          sessionStorage.removeItem("user")
+          sessionStorage.removeItem("token")
         }
-      } else if (!rememberMe) {
-        // Si no está marcado "recordarme", limpiar sesión al recargar
-        localStorage.removeItem("user")
-        localStorage.removeItem("token")
-        localStorage.removeItem("rememberMe")
       }
     }
     setIsLoading(false)

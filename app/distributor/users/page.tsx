@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label"
 import { Search, Plus, Coins, Trash2, Eye, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import { usersApi } from "@/lib/api"
+import { usersApi, creditsApi } from "@/lib/api"
 
 export default function DistributorUsersPage() {
   const { user, refreshUserCredits } = useAuth()
@@ -49,6 +49,11 @@ export default function DistributorUsersPage() {
   const [newUsername, setNewUsername] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [creditsAmount, setCreditsAmount] = useState("")
+  const [creditStats, setCreditStats] = useState({
+    balance: 0,
+    distributed: 0,
+    available: 0
+  })
 
   const filteredUsers = myUsers.filter(
     (u) =>
@@ -56,14 +61,27 @@ export default function DistributorUsersPage() {
       u.email?.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const myCredits = user?.credits || 0
-  const creditsDistributed = myUsers.reduce((sum, u) => sum + (u.credits || 0), 0)
-  const creditsAvailable = myCredits - creditsDistributed
-
   // Cargar usuarios al montar el componente
   useEffect(() => {
     loadUsers()
+    loadCreditStats()
   }, [])
+
+  const loadCreditStats = async () => {
+    try {
+      const response = await creditsApi.getBalance()
+
+      if (response.success && response.data) {
+        setCreditStats({
+          balance: response.data.balance || 0,
+          distributed: response.data.distributed || 0,
+          available: response.data.available || (response.data.balance || 0)
+        })
+      }
+    } catch (error: any) {
+      console.error("Error loading credit stats:", error)
+    }
+  }
 
   const loadUsers = async () => {
     try {
@@ -107,6 +125,7 @@ export default function DistributorUsersPage() {
         setNewUsername("")
         setNewPassword("")
         await loadUsers()
+        await loadCreditStats()
         await refreshUserCredits()
       } else {
         throw new Error(response.error || "Error al crear usuario")
@@ -142,7 +161,7 @@ export default function DistributorUsersPage() {
       return
     }
 
-    if (amount > creditsAvailable) {
+    if (amount > creditStats.available) {
       toast({
         title: "Error",
         description: "No tienes suficientes créditos disponibles",
@@ -163,6 +182,7 @@ export default function DistributorUsersPage() {
         setIsAssignCreditsDialogOpen(false)
         setCreditsAmount("")
         await loadUsers()
+        await loadCreditStats()
         await refreshUserCredits()
       } else {
         throw new Error(response.error || "Error al asignar créditos")
@@ -193,6 +213,7 @@ export default function DistributorUsersPage() {
         setIsDeleteDialogOpen(false)
         setSelectedUser(null)
         await loadUsers()
+        await loadCreditStats()
         await refreshUserCredits()
       } else {
         throw new Error(response.error || "Error al eliminar usuario")
@@ -230,7 +251,7 @@ export default function DistributorUsersPage() {
               <h1 className="text-3xl font-bold text-white mb-2">Mis Usuarios</h1>
               <p className="text-white/70">
                 Créditos disponibles:{" "}
-                <span className="text-orange-400 font-bold">{creditsAvailable.toLocaleString()}</span>
+                <span className="text-orange-400 font-bold">{creditStats.available.toLocaleString()}</span>
               </p>
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -419,7 +440,7 @@ export default function DistributorUsersPage() {
                     value={creditsAmount}
                     onChange={(e) => setCreditsAmount(e.target.value)}
                   />
-                  <p className="text-white/60 text-xs">Disponibles: {creditsAvailable.toLocaleString()}</p>
+                  <p className="text-white/60 text-xs">Disponibles: {creditStats.available.toLocaleString()}</p>
                 </div>
                 <Button
                   onClick={handleAssignCredits}
