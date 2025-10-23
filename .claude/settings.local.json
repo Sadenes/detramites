@@ -21,7 +21,13 @@
       "Bash(node -e \"console.log(require(''crypto'').randomBytes(32).toString(''hex''))\")",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm run migrate:ipv4:*)",
+      "WebSearch",
+      "WebFetch(domain:scrapfly.io)",
+      "Bash(node test-scrapfly.js)",
+      "Bash(node:*)",
+      "Bash(npx playwright install:*)"
     ],
     "deny": [],
     "ask": []
