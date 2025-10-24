@@ -603,6 +603,32 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
 
     const response2 = JSON.parse(result2.data);
 
+    // Log para debugging
+    console.log('=== Resumen Movimientos Response Debug ===');
+    console.log('Response keys:', Object.keys(response2));
+    console.log('codeOp:', response2.codeOp);
+    console.log('message:', response2.message);
+    console.log('pdf exists:', !!response2.pdf);
+    console.log('pdf length:', response2.pdf?.length || 0);
+    console.log('Full response (first 500 chars):', JSON.stringify(response2).substring(0, 500));
+    console.log('==========================================');
+
+    // Validar que exista el PDF y tenga contenido
+    if (!response2.pdf || response2.pdf.length === 0) {
+      await prisma.apiQuery.update({
+        where: { id: queryRecord.id },
+        data: {
+          status: QueryStatus.FAILED,
+          errorMsg: `No hay PDF disponible. Código: ${response2.codeOp}, Mensaje: ${response2.message}`,
+        },
+      });
+
+      throw new Error(
+        response2.message ||
+        'No se pudo obtener el resumen de movimientos. Es posible que no haya información disponible para este NSS.'
+      );
+    }
+
     await prisma.apiQuery.update({
       where: { id: queryRecord.id },
       data: {
