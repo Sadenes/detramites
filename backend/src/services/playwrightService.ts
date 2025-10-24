@@ -58,35 +58,30 @@ class PlaywrightService {
       // Esperar 5 segundos para que se generen las cookies Akamai (stealth plugin)
       await page.waitForTimeout(5000);
 
-      // Ahora hacer el POST request con las cookies ya generadas
-      const response = await page.evaluate(
-        async ({ url, body, headers, isXml }) => {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': isXml ? 'text/xml' : 'application/json',
-              ...headers,
-            },
-            body: isXml ? body : JSON.stringify(body),
-          });
-
-          return {
-            status: res.status,
-            data: await res.text(),
-          };
+      // Usar page.request en vez de fetch dentro de evaluate
+      const response = await page.request.post(url, {
+        data: options.isXml ? options.body : options.body,
+        headers: {
+          'Content-Type': options.isXml ? 'text/xml' : 'application/json',
+          ...options.headers,
         },
-        {
-          url,
-          body: options.body,
-          headers: options.headers || {},
-          isXml: options.isXml || false,
-        }
-      );
+      });
+
+      const responseText = await response.text();
+      const status = response.status();
 
       await page.close();
       await context.close();
 
-      return response;
+      // Si recibimos HTML (Akamai bloqueando), lanzar error específico
+      if (status === 403 || responseText.includes('<HTML>') || responseText.includes('Access Denied')) {
+        throw new Error(`Akamai bloqueó la request (${status}): ${responseText.substring(0, 200)}`);
+      }
+
+      return {
+        status,
+        data: responseText,
+      };
     } catch (error: any) {
       await page.close();
       await context.close();
