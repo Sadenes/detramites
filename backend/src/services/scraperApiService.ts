@@ -86,6 +86,16 @@ export const makeScraperApiRequest = async (
         params.premium = 'true';
       }
 
+      // Log detallado de la request
+      console.log('=== ScraperAPI POST Request Debug ===');
+      console.log('Target URL:', url);
+      console.log('Params:', JSON.stringify(params, null, 2));
+      console.log('Headers:', JSON.stringify(finalHeaders, null, 2));
+      console.log('Body (first 500 chars):', typeof postData === 'string' ? postData.substring(0, 500) : JSON.stringify(postData).substring(0, 500));
+      console.log('Body type:', typeof postData);
+      console.log('Body length:', typeof postData === 'string' ? postData.length : JSON.stringify(postData).length);
+      console.log('=====================================');
+
       const response = await axios({
         method: 'POST',
         url: 'https://api.scraperapi.com/',
@@ -101,8 +111,18 @@ export const makeScraperApiRequest = async (
       };
     }
   } catch (error: any) {
-    console.error('ScraperAPI request failed:', error.message);
-    console.error('Error details:', error.response?.data);
+    console.error('=== ScraperAPI Error Debug ===');
+    console.error('Error message:', error.message);
+    console.error('Response status:', error.response?.status);
+    console.error('Response data:', error.response?.data);
+    console.error('Request config:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      params: error.config?.params,
+      headers: error.config?.headers,
+      data: typeof error.config?.data === 'string' ? error.config?.data.substring(0, 500) : JSON.stringify(error.config?.data).substring(0, 500),
+    });
+    console.error('==============================');
 
     // Si ScraperAPI falla, lanzar error con detalles
     if (error.response) {
