@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { scrapflyJsonRequest, scrapflyXmlRequest } from './scrapflyService';
 import { parseStringPromise } from 'xml2js';
-import playwrightService from './playwrightService';
+import scraperApiService from './scraperApiService';
 
 // Agente HTTPS que ignora certificados autofirmados
 const httpsAgent = new https.Agent({
@@ -73,7 +73,7 @@ const handleQueryError = async (
   }
 };
 
-// 1. CAMBIAR CONTRASEÑA (MIGRADO A PLAYWRIGHT)
+// 1. CAMBIAR CONTRASEÑA (MIGRADO A SCRAPERAPI)
 export const cambiarPassword = async (nss: string, userId: string): Promise<any> => {
   const newPassword = nss + generateRandomChars(4);
 
@@ -88,7 +88,7 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
   });
 
   try {
-    const result = await playwrightService.makeRequest(
+    const result = await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/CambiarPwdMailSDS',
       {
         method: 'POST',
@@ -127,7 +127,7 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
   }
 };
 
-// 2. DESVINCULACIÓN DE DISPOSITIVO (MIGRADO A PLAYWRIGHT)
+// 2. DESVINCULACIÓN DE DISPOSITIVO (MIGRADO A SCRAPERAPI)
 export const desvincularDispositivo = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -140,8 +140,8 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
   });
 
   try {
-    // Paso 1: Desvincular dispositivo con Playwright
-    const result = await playwrightService.makeRequest(
+    // Paso 1: Desvincular dispositivo con ScraperAPI
+    const result = await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/RealizaDesvinculacionSDS',
       {
         method: 'POST',
@@ -162,7 +162,7 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
     const newPassword = nss + generateRandomChars(4);
 
     try {
-      await playwrightService.makeRequest(
+      await scraperApiService.makeRequest(
         'https://serviciosweb.infonavit.org.mx/RESTAdapter/CambiarPwdMailSDS',
         {
           method: 'POST',
@@ -331,7 +331,7 @@ export const consultarAvisos = async (credito: string, userId: string): Promise<
   }
 };
 
-// 4. ESTADO DE CUENTA MENSUAL (MIGRADO A PLAYWRIGHT)
+// 4. ESTADO DE CUENTA MENSUAL (MIGRADO A SCRAPERAPI)
 export const estadoCuentaMensual = async (
   credito: string,
   periodos: string[],
@@ -351,8 +351,8 @@ export const estadoCuentaMensual = async (
   });
 
   try {
-    // 4.1 Consultar periodos disponibles con Playwright
-    const result1 = await playwrightService.makeRequest(
+    // 4.1 Consultar periodos disponibles con ScraperAPI
+    const result1 = await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/SndPeriodosDisponiblesAppMovil',
       {
         method: 'POST',
@@ -385,10 +385,10 @@ export const estadoCuentaMensual = async (
     const pdfs: any[] = [];
     const errors: any[] = [];
 
-    // Ejecutar todas las requests en paralelo usando Playwright
+    // Ejecutar todas las requests en paralelo usando ScraperAPI
     const results = await Promise.allSettled(
       periodos.map(async (periodo) => {
-        const result = await playwrightService.makeRequest(
+        const result = await scraperApiService.makeRequest(
           'https://serviciosweb.infonavit.org.mx/RESTAdapter/SndEdoCuentaMensualConsultar',
           {
             method: 'POST',
@@ -464,7 +464,7 @@ export const estadoCuentaMensual = async (
   }
 };
 
-// 5. ESTADO DE CUENTA HISTÓRICO (MIGRADO A PLAYWRIGHT)
+// 5. ESTADO DE CUENTA HISTÓRICO (MIGRADO A SCRAPERAPI)
 export const estadoCuentaHistorico = async (credito: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -477,7 +477,7 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
   });
 
   try {
-    const result = await playwrightService.makeRequest(
+    const result = await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/SndEdoCuentaHistoricoConsultar',
       {
         method: 'POST',
@@ -512,7 +512,7 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
   }
 };
 
-// 6. RESUMEN DE MOVIMIENTOS (2 requests automáticas - MIGRADO A PLAYWRIGHT)
+// 6. RESUMEN DE MOVIMIENTOS (2 requests automáticas - MIGRADO A SCRAPERAPI)
 export const resumenMovimientos = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -525,8 +525,8 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
   });
 
   try {
-    // Request 1: Solicitar ticket con Playwright
-    await playwrightService.makeRequest(
+    // Request 1: Solicitar ticket con ScraperAPI
+    await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqTicketSummaryMovSSV',
       {
         method: 'POST',
@@ -553,8 +553,8 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
     // Esperar 1.5 segundos
     await sleep(1500);
 
-    // Request 2: Obtener resumen con Playwright
-    const result2 = await playwrightService.makeRequest(
+    // Request 2: Obtener resumen con ScraperAPI
+    const result2 = await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqSummaryMovSSV',
       {
         method: 'POST',
@@ -592,7 +592,7 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
   }
 };
 
-// 8. VERIFICACIÓN DE CUENTA (GRATIS - NO CONSUME CRÉDITOS) - PLAYWRIGHT
+// 8. VERIFICACIÓN DE CUENTA (GRATIS - NO CONSUME CRÉDITOS) - SCRAPERAPI
 export const verificarCuenta = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -616,7 +616,7 @@ export const verificarCuenta = async (nss: string, userId: string): Promise<any>
    </soapenv:Body>
 </soapenv:Envelope>`;
 
-    const response = await playwrightService.makeRequest(
+    const response = await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/wps/MCI2-RegistroWS/jaxservicesNT',
       {
         method: 'POST',
@@ -676,7 +676,7 @@ export const verificarCuenta = async (nss: string, userId: string): Promise<any>
   }
 };
 
-// 9. CONSULTA DATOS DE CONTACTO - PLAYWRIGHT
+// 9. CONSULTA DATOS DE CONTACTO - SCRAPERAPI
 export const consultarDatosContacto = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -689,7 +689,7 @@ export const consultarDatosContacto = async (nss: string, userId: string): Promi
   });
 
   try {
-    const result = await playwrightService.makeRequest(
+    const result = await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/sndConsultaDatosContactoNT',
       {
         method: 'POST',
@@ -755,7 +755,7 @@ export const consultarDatosContacto = async (nss: string, userId: string): Promi
   }
 };
 
-// 7. BUSCAR CRÉDITO POR NSS (MIGRADO A PLAYWRIGHT)
+// 7. BUSCAR CRÉDITO POR NSS (MIGRADO A SCRAPERAPI)
 export const buscarCreditoPorNSS = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -768,7 +768,7 @@ export const buscarCreditoPorNSS = async (nss: string, userId: string): Promise<
   });
 
   try {
-    const result = await playwrightService.makeRequest(
+    const result = await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/GetPrfoNss/Login/',
       {
         method: 'POST',
