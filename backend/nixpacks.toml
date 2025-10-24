@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ['...', 'chromium', 'nss', 'freetype', 'fontconfig', 'libxcb', 'pango', 'cairo', 'glib', 'atk', 'at-spi2-atk', 'gtk3', 'cups', 'libdrm', 'libxkbcommon', 'mesa', 'dbus', 'expat', 'xorg.libxshmfence', 'xorg.libX11', 'xorg.libXcomposite', 'xorg.libXdamage', 'xorg.libXext', 'xorg.libXfixes', 'xorg.libXrandr', 'xorg.libxcb', 'alsaLib']
+
+[phases.install]
+cmds = ['npm ci']
+
+[phases.build]
+cmds = ['npx prisma generate', 'npm run build']
+
+[start]
+cmd = 'npx prisma migrate deploy && npm run seed:production && node dist/index.js'
