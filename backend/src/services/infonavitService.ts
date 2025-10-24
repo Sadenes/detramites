@@ -572,7 +572,10 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
           tipoFormato: 1,
         },
         headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Accept-Encoding': 'gzip, deflate, br',
           'User-Agent': 'okhttp/4.12.0',
+          'Connection': 'keep-alive',
         },
       }
     );
@@ -590,7 +593,10 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
           ticket: '',
         },
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'User-Agent': 'Mozilla/5.0 (platform; rv:geckoversion) Gecko/geckotrail Firefox/firefoxversion',
+          'Connection': 'keep-alive',
         },
       }
     );
