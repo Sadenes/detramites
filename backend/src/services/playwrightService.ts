@@ -1,7 +1,11 @@
-import { chromium, Browser, Page } from 'playwright';
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+
+// Aplicar plugin stealth para bypass de Akamai
+chromium.use(StealthPlugin());
 
 class PlaywrightService {
-  private browser: Browser | null = null;
+  private browser: any = null;
 
   async init() {
     if (!this.browser) {
@@ -35,8 +39,11 @@ class PlaywrightService {
     await this.init();
 
     const context = await this.browser!.newContext({
-      userAgent: options.headers?.['User-Agent'] || 'okhttp/5.1.0',
+      userAgent: options.headers?.['User-Agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       extraHTTPHeaders: options.headers || {},
+      viewport: { width: 1920, height: 1080 },
+      locale: 'es-MX',
+      timezoneId: 'America/Mexico_City',
     });
 
     const page = await context.newPage();
@@ -44,12 +51,12 @@ class PlaywrightService {
     try {
       // Navegar primero a la página principal para generar cookies Akamai
       await page.goto('https://serviciosweb.infonavit.org.mx', {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
         timeout: 30000,
       });
 
-      // Esperar 2 segundos para que se generen las cookies Akamai
-      await page.waitForTimeout(2000);
+      // Esperar 5 segundos para que se generen las cookies Akamai (stealth plugin)
+      await page.waitForTimeout(5000);
 
       // Ahora hacer el POST request con las cookies ya generadas
       const response = await page.evaluate(

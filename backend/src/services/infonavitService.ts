@@ -127,7 +127,7 @@ export const cambiarPassword = async (nss: string, userId: string): Promise<any>
   }
 };
 
-// 2. DESVINCULACIÓN DE DISPOSITIVO
+// 2. DESVINCULACIÓN DE DISPOSITIVO (MIGRADO A PLAYWRIGHT)
 export const desvincularDispositivo = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -140,46 +140,45 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
   });
 
   try {
-    // Paso 1: Desvincular dispositivo
-    const response = await axios.post(
+    // Paso 1: Desvincular dispositivo con Playwright
+    const result = await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/RealizaDesvinculacionSDS',
       {
-        ID_CAT_APP: 'APL0211',
-        grupo: 'cn=GS_MICUENTA,ou=atencionservicios,ou=areasapoyo,O=INFONAVIT',
-        nss,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': getRandomUserAgent(),
+        method: 'POST',
+        body: {
+          ID_CAT_APP: 'APL0211',
+          grupo: 'cn=GS_MICUENTA,ou=atencionservicios,ou=areasapoyo,O=INFONAVIT',
+          nss,
         },
-        timeout: 15000,
+        headers: {
+          'User-Agent': 'okhttp/5.1.0',
+        },
       }
     );
+
+    const response = JSON.parse(result.data);
 
     // Paso 2: Cambiar contraseña automáticamente
     const newPassword = nss + generateRandomChars(4);
 
     try {
-      await axios.post(
+      await playwrightService.makeRequest(
         'https://serviciosweb.infonavit.org.mx/RESTAdapter/CambiarPwdMailSDS',
         {
-          ID_CAT_APP: 'APL0211',
-          grupo: 'cn=GS_MICUENTA,ou=atencionservicios,ou=areasapoyo,O=INFONAVIT',
-          usuario: nss,
-          valor: newPassword,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-            'User-Agent': getRandomUserAgent(),
-            'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+          method: 'POST',
+          body: {
+            ID_CAT_APP: 'APL0211',
+            grupo: 'cn=GS_MICUENTA,ou=atencionservicios,ou=areasapoyo,O=INFONAVIT',
+            usuario: nss,
+            valor: newPassword,
           },
-          timeout: 15000,
+          headers: {
+            'X-Api-Key': process.env.INFONAVIT_API_KEY || '',
+            'User-Agent': 'okhttp/5.1.0',
+          },
         }
       );
     } catch (passwordError: any) {
-      // Si falla el cambio de contraseña, aún reportamos éxito en la desvinculación
       console.error('Error al cambiar contraseña después de desvinculación:', passwordError);
     }
 
@@ -187,7 +186,7 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
       where: { id: queryRecord.id },
       data: {
         status: QueryStatus.COMPLETED,
-        response: { ...response.data, newPassword },
+        response: { ...response, newPassword },
       },
     });
 
@@ -195,7 +194,7 @@ export const desvincularDispositivo = async (nss: string, userId: string): Promi
       success: true,
       message: 'Dispositivo desvinculado y contraseña actualizada correctamente',
       newPassword,
-      response: response.data,
+      response,
     };
   } catch (error: any) {
     await handleQueryError(queryRecord.id, userId, 1, error);
@@ -332,7 +331,7 @@ export const consultarAvisos = async (credito: string, userId: string): Promise<
   }
 };
 
-// 4. ESTADO DE CUENTA MENSUAL
+// 4. ESTADO DE CUENTA MENSUAL (MIGRADO A PLAYWRIGHT)
 export const estadoCuentaMensual = async (
   credito: string,
   periodos: string[],
@@ -352,18 +351,19 @@ export const estadoCuentaMensual = async (
   });
 
   try {
-    // 4.1 Consultar periodos disponibles
-    const periodosDisponibles = await axios.post(
+    // 4.1 Consultar periodos disponibles con Playwright
+    const result1 = await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/SndPeriodosDisponiblesAppMovil',
-      { credito },
       {
+        method: 'POST',
+        body: { credito },
         headers: {
           Authorization: `Bearer ${token || ''}`,
-          'Content-Type': 'application/json',
         },
-        timeout: 15000,
       }
     );
+
+    const periodosDisponibles = JSON.parse(result1.data);
 
     // Si no se especificaron períodos, solo retornar los disponibles
     if (periodos.length === 0) {
@@ -371,37 +371,37 @@ export const estadoCuentaMensual = async (
         where: { id: queryRecord.id },
         data: {
           status: QueryStatus.COMPLETED,
-          response: { availablePeriods: periodosDisponibles.data },
+          response: { availablePeriods: periodosDisponibles },
         },
       });
 
       return {
         success: true,
-        availablePeriods: periodosDisponibles.data,
+        availablePeriods: periodosDisponibles,
       };
     }
 
-    // 4.2 Por cada periodo, obtener estado de cuenta (en paralelo para mejor performance)
+    // 4.2 Por cada periodo, obtener estado de cuenta (en paralelo)
     const pdfs: any[] = [];
     const errors: any[] = [];
 
-    // Ejecutar todas las requests en paralelo
+    // Ejecutar todas las requests en paralelo usando Playwright
     const results = await Promise.allSettled(
       periodos.map(async (periodo) => {
-        const response = await axios.post(
+        const result = await playwrightService.makeRequest(
           'https://serviciosweb.infonavit.org.mx/RESTAdapter/SndEdoCuentaMensualConsultar',
           {
-            numeroCredito: credito,
-            periodo,
-          },
-          {
+            method: 'POST',
+            body: {
+              numeroCredito: credito,
+              periodo,
+            },
             headers: {
               Authorization: `Bearer ${token || ''}`,
-              'Content-Type': 'application/json',
             },
-            timeout: 15000,
           }
         );
+        const response = JSON.parse(result.data);
         return { periodo, response };
       })
     );
@@ -415,22 +415,21 @@ export const estadoCuentaMensual = async (
         const { response } = result.value;
 
         // Verificar código de respuesta
-        if (response.data.StatusServicio.codigo === '02') {
+        if (response.StatusServicio.codigo === '02') {
           errors.push({
             periodo,
             message: 'Este crédito no tiene información para este periodo',
           });
-          // Devolver 1 crédito por este periodo
           await refundCredits(
             userId,
             1,
             `Devolución: periodo ${periodo} sin información`
           );
-        } else if (response.data.reporte) {
+        } else if (response.reporte) {
           pdfs.push({
             periodo,
             filename: `estado_mensual_${credito}_${periodo}.pdf`,
-            data: response.data.reporte,
+            data: response.reporte,
           });
         }
       } else {
@@ -440,7 +439,6 @@ export const estadoCuentaMensual = async (
           error: error.message,
         });
 
-        // Devolver 1 crédito por este periodo fallido
         if (shouldRefund(error, error.response?.status)) {
           await refundCredits(userId, 1, `Devolución: error en periodo ${periodo}`);
         }
@@ -466,7 +464,7 @@ export const estadoCuentaMensual = async (
   }
 };
 
-// 5. ESTADO DE CUENTA HISTÓRICO
+// 5. ESTADO DE CUENTA HISTÓRICO (MIGRADO A PLAYWRIGHT)
 export const estadoCuentaHistorico = async (credito: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -479,24 +477,24 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
   });
 
   try {
-    const response = await axios.post(
+    const result = await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/SndEdoCuentaHistoricoConsultar',
-      { numeroCredito: credito },
       {
+        method: 'POST',
+        body: { numeroCredito: credito },
         headers: {
-          'Content-Type': 'application/json',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
-        timeout: 15000,
       }
     );
+
+    const response = JSON.parse(result.data);
 
     await prisma.apiQuery.update({
       where: { id: queryRecord.id },
       data: {
         status: QueryStatus.COMPLETED,
-        response: { status: response.data.StatusServicio },
+        response: { status: response.StatusServicio },
       },
     });
 
@@ -504,9 +502,9 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
       success: true,
       pdf: {
         filename: `historico_${credito}.pdf`,
-        data: response.data.reporte,
+        data: response.reporte,
       },
-      response: response.data,
+      response,
     };
   } catch (error: any) {
     await handleQueryError(queryRecord.id, userId, 1, error);
@@ -514,7 +512,7 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
   }
 };
 
-// 6. RESUMEN DE MOVIMIENTOS (2 requests automáticas)
+// 6. RESUMEN DE MOVIMIENTOS (2 requests automáticas - MIGRADO A PLAYWRIGHT)
 export const resumenMovimientos = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -527,56 +525,56 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
   });
 
   try {
-    // Request 1: Solicitar ticket
-    const response1 = await axios.post(
+    // Request 1: Solicitar ticket con Playwright
+    await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqTicketSummaryMovSSV',
       {
-        docFa: 0,
-        docTodo: 1,
-        docViv92: 0,
-        docViv97Todo: 0,
-        emailDh: '',
-        idSistema: 4,
-        nombreDh: '',
-        nss,
-        subCatA: 0,
-        subCatB: 0,
-        subCatC: 0,
-        tipoFormato: 1,
-      },
-      {
+        method: 'POST',
+        body: {
+          docFa: 0,
+          docTodo: 1,
+          docViv92: 0,
+          docViv97Todo: 0,
+          emailDh: '',
+          idSistema: 4,
+          nombreDh: '',
+          nss,
+          subCatA: 0,
+          subCatB: 0,
+          subCatC: 0,
+          tipoFormato: 1,
+        },
         headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
           'User-Agent': 'okhttp/4.12.0',
         },
-        timeout: 15000,
       }
     );
 
-    // Esperar 1.5 segundos (optimizado)
+    // Esperar 1.5 segundos
     await sleep(1500);
 
-    // Request 2: Obtener resumen
-    const response2 = await axios.post(
+    // Request 2: Obtener resumen con Playwright
+    const result2 = await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqSummaryMovSSV',
       {
-        nss,
-        ticket: '',
-      },
-      {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+        method: 'POST',
+        body: {
+          nss,
+          ticket: '',
         },
-        timeout: 15000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
       }
     );
+
+    const response2 = JSON.parse(result2.data);
 
     await prisma.apiQuery.update({
       where: { id: queryRecord.id },
       data: {
         status: QueryStatus.COMPLETED,
-        response: { codeOp: response2.data.codeOp, message: response2.data.message },
+        response: { codeOp: response2.codeOp, message: response2.message },
       },
     });
 
@@ -584,9 +582,9 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
       success: true,
       pdf: {
         filename: `${nss}_resumen_movs.pdf`,
-        data: response2.data.pdf,
+        data: response2.pdf,
       },
-      response: response2.data,
+      response: response2,
     };
   } catch (error: any) {
     await handleQueryError(queryRecord.id, userId, 1, error);
@@ -757,7 +755,7 @@ export const consultarDatosContacto = async (nss: string, userId: string): Promi
   }
 };
 
-// 7. BUSCAR CRÉDITO POR NSS
+// 7. BUSCAR CRÉDITO POR NSS (MIGRADO A PLAYWRIGHT)
 export const buscarCreditoPorNSS = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -770,28 +768,29 @@ export const buscarCreditoPorNSS = async (nss: string, userId: string): Promise<
   });
 
   try {
-    const response = await axios.post(
+    const result = await playwrightService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/GetPrfoNss/Login/',
-      { IP_CV_NSS: nss },
       {
+        method: 'POST',
+        body: { IP_CV_NSS: nss },
         headers: {
-          'Content-Type': 'application/json',
           'User-Agent': 'okhttp/5.1.0',
         },
-        timeout: 15000,
       }
     );
+
+    const response = JSON.parse(result.data);
 
     await prisma.apiQuery.update({
       where: { id: queryRecord.id },
       data: {
         status: QueryStatus.COMPLETED,
-        response: response.data,
+        response,
       },
     });
 
     // Formatear respuesta en 2 tablas
-    const data = response.data[0]; // Asumiendo que devuelve un array
+    const data = response[0]; // Asumiendo que devuelve un array
 
     const tabla1 = {
       'NSS': data.nss || 'N/A',
