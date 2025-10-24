@@ -15,6 +15,9 @@ class PlaywrightService {
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-blink-features=AutomationControlled',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--disable-web-security',
+          '--disable-features=BlockInsecurePrivateNetworkRequests',
         ],
       });
     }
@@ -44,19 +47,59 @@ class PlaywrightService {
       viewport: { width: 1920, height: 1080 },
       locale: 'es-MX',
       timezoneId: 'America/Mexico_City',
+      ignoreHTTPSErrors: true,
     });
 
     const page = await context.newPage();
 
+    // Agregar scripts de evasión adicionales
+    await page.addInitScript(() => {
+      // @ts-ignore
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      });
+
+      // @ts-ignore
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+      });
+
+      // @ts-ignore
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['es-MX', 'es', 'en-US', 'en'],
+      });
+
+      // @ts-ignore
+      window.chrome = {
+        runtime: {},
+      };
+
+      // @ts-ignore
+      const originalQuery = window.navigator.permissions.query;
+      // @ts-ignore
+      window.navigator.permissions.query = (parameters) =>
+        parameters.name === 'notifications'
+          // @ts-ignore
+          ? Promise.resolve({ state: 'denied' })
+          : originalQuery(parameters);
+    });
+
     try {
       // Navegar primero a la página principal para generar cookies Akamai
       await page.goto('https://serviciosweb.infonavit.org.mx', {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000,
+        waitUntil: 'networkidle',
+        timeout: 60000,
       });
 
-      // Esperar 5 segundos para que se generen las cookies Akamai (stealth plugin)
-      await page.waitForTimeout(5000);
+      // Esperar 8 segundos para que se generen las cookies Akamai
+      await page.waitForTimeout(8000);
+
+      // Hacer scroll y movimiento de mouse para parecer más humano
+      await page.evaluate(() => {
+        // @ts-ignore
+        window.scrollTo(0, 100);
+      });
+      await page.waitForTimeout(500);
 
       // Usar page.request en vez de fetch dentro de evaluate
       const response = await page.request.post(url, {
