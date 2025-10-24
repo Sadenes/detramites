@@ -853,7 +853,7 @@ export default function ConsultasPage() {
                 Obtener Resumen de Movimientos
               </Button>
 
-              {result?.type === "summary" && (
+              {result?.type === "summary" && result.data.success !== false && (
                 <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-3">
                   <div className="flex items-center gap-2 text-green-400 mb-3">
                     <CheckCircle2 className="w-5 h-5" />
@@ -883,6 +883,18 @@ export default function ConsultasPage() {
                       </p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {result?.type === "summary" && result.data.success === false && (
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-400">
+                    <Info className="w-5 h-5" />
+                    <span className="font-medium">{result.data.message}</span>
+                  </div>
+                  <p className="text-white/70 text-sm mt-2">
+                    Este NSS no tiene información de movimientos disponible en el sistema INFONAVIT.
+                  </p>
                 </div>
               )}
 

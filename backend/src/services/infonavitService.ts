@@ -580,8 +580,8 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
       }
     );
 
-    // Esperar 1.5 segundos
-    await sleep(1500);
+    // Esperar 3 segundos para que el PDF se genere
+    await sleep(3000);
 
     // Request 2: Obtener resumen con ScraperAPI
     const result2 = await scraperApiService.makeRequest(
@@ -613,20 +613,22 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
     console.log('Full response (first 500 chars):', JSON.stringify(response2).substring(0, 500));
     console.log('==========================================');
 
-    // Validar que exista el PDF y tenga contenido
-    if (!response2.pdf || response2.pdf.length === 0) {
+    // Validar respuesta según código de operación
+    if (response2.codeOp === '01' || !response2.pdf || response2.pdf.length === 0) {
+      // Código 01 = No existe pdf asociado a NSS
       await prisma.apiQuery.update({
         where: { id: queryRecord.id },
         data: {
-          status: QueryStatus.FAILED,
-          errorMsg: `No hay PDF disponible. Código: ${response2.codeOp}, Mensaje: ${response2.message}`,
+          status: QueryStatus.COMPLETED,
+          errorMsg: `Sin información. Código: ${response2.codeOp}, Mensaje: ${response2.message}`,
         },
       });
 
-      throw new Error(
-        response2.message ||
-        'No se pudo obtener el resumen de movimientos. Es posible que no haya información disponible para este NSS.'
-      );
+      return {
+        success: false,
+        message: response2.message || 'No existe información de movimientos para este NSS',
+        codeOp: response2.codeOp,
+      };
     }
 
     await prisma.apiQuery.update({
