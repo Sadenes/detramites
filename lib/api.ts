@@ -275,24 +275,50 @@ export const monitoringApi = {
 export const downloadPDF = (base64Data: string, filename: string) => {
   try {
     if (!base64Data) {
+      console.error('downloadPDF: No se proporcionó datos del PDF');
       throw new Error('No se proporcionó datos del PDF');
     }
 
+    console.log('downloadPDF: Iniciando descarga de', filename);
+    console.log('downloadPDF: Tipo de datos recibidos:', typeof base64Data);
+    console.log('downloadPDF: Longitud de datos:', base64Data.length);
+    console.log('downloadPDF: Primeros 100 caracteres:', base64Data.substring(0, 100));
+
     // Limpiar el base64 si tiene prefijos
-    let cleanBase64 = base64Data;
-    if (base64Data.includes(',')) {
-      cleanBase64 = base64Data.split(',')[1];
+    let cleanBase64 = base64Data.trim();
+    if (cleanBase64.includes(',')) {
+      console.log('downloadPDF: Limpiando prefijo de base64');
+      cleanBase64 = cleanBase64.split(',')[1];
     }
 
+    // Verificar que el base64 sea válido
+    if (!cleanBase64 || cleanBase64.length === 0) {
+      console.error('downloadPDF: El base64 está vacío después de limpiar');
+      throw new Error('El base64 está vacío');
+    }
+
+    console.log('downloadPDF: Base64 limpio, longitud:', cleanBase64.length);
+
     // Decodificar base64
-    const binaryString = window.atob(cleanBase64);
+    let binaryString;
+    try {
+      binaryString = window.atob(cleanBase64);
+      console.log('downloadPDF: Base64 decodificado exitosamente, longitud:', binaryString.length);
+    } catch (atobError) {
+      console.error('downloadPDF: Error al decodificar base64:', atobError);
+      throw new Error('El base64 no es válido: ' + (atobError as Error).message);
+    }
+
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
 
+    console.log('downloadPDF: Bytes array creado, longitud:', bytes.length);
+
     // Crear blob
     const blob = new Blob([bytes], { type: 'application/pdf' });
+    console.log('downloadPDF: Blob creado, tamaño:', blob.size);
 
     // Crear URL y descargar
     const url = URL.createObjectURL(blob);
@@ -303,9 +329,14 @@ export const downloadPDF = (base64Data: string, filename: string) => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    console.log('downloadPDF: Descarga completada exitosamente');
   } catch (error) {
-    console.error('Error al descargar PDF:', error);
-    console.error('Base64 data:', base64Data?.substring(0, 100));
+    console.error('downloadPDF: Error al descargar PDF:', error);
+    console.error('downloadPDF: Filename:', filename);
+    console.error('downloadPDF: Base64 data (primeros 200 chars):', base64Data?.substring(0, 200));
+    console.error('downloadPDF: Base64 data (últimos 100 chars):', base64Data?.substring(base64Data.length - 100));
     alert('Error al descargar el PDF. Por favor verifica la consola para más detalles.');
+    throw error;
   }
 };

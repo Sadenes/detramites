@@ -102,9 +102,6 @@ export default function ConsultasPage() {
 
         case "summary":
           response = await infonavitApi.resumenMovimientos(inputValue)
-          console.log("Resumen de movimientos response:", JSON.stringify(response, null, 2))
-          console.log("PDF data exists?", !!response.pdf)
-          console.log("PDF data content?", response.pdf?.data ? "Yes" : "No")
           setResult({ type: "summary", data: response })
           break
 
@@ -548,20 +545,33 @@ export default function ConsultasPage() {
                 <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-3">
                   <div className="flex items-center gap-2 text-green-400 mb-3">
                     <CheckCircle2 className="w-5 h-5" />
-                    <span className="font-medium">Avisos obtenidos exitosamente</span>
+                    <span className="font-medium">
+                      {result.data.pdfs && result.data.pdfs.length > 0
+                        ? 'Avisos obtenidos exitosamente'
+                        : result.data.message || 'No se encontraron avisos para este crédito'}
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    {result.data.pdfs && result.data.pdfs.map((pdf: any, index: number) => (
-                      <Button
-                        key={index}
-                        onClick={() => downloadPDF(pdf.data, pdf.filename)}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white justify-start"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        {pdf.filename}
-                      </Button>
-                    ))}
-                  </div>
+                  {result.data.pdfs && result.data.pdfs.length > 0 && (
+                    <div className="space-y-2">
+                      {result.data.pdfs.map((pdf: any, index: number) => (
+                        <Button
+                          key={index}
+                          onClick={() => downloadPDF(pdf.data, pdf.filename)}
+                          className="w-full bg-orange-500 hover:bg-orange-600 text-white justify-start"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          {pdf.filename}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  {(!result.data.pdfs || result.data.pdfs.length === 0) && (
+                    <div className="p-3 bg-white/5 rounded-lg">
+                      <p className="text-white/70 text-sm">
+                        ℹ️ Este crédito no tiene avisos de suspensión, retención o modificación registrados.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -857,20 +867,21 @@ export default function ConsultasPage() {
                       Este documento contiene información detallada de todos los depósitos, retiros y movimientos realizados.
                     </p>
                   </div>
-                  {result.data.pdf && (
+                  {result.data.pdf && result.data.pdf.data && (
                     <Button
-                      onClick={() => {
-                        console.log("About to download PDF for summary")
-                        console.log("PDF data:", result.data.pdf.data ? "exists" : "missing")
-                        console.log("PDF filename:", result.data.pdf.filename)
-                        console.log("First 100 chars of PDF data:", result.data.pdf.data?.substring(0, 100))
-                        downloadPDF(result.data.pdf.data, result.data.pdf.filename)
-                      }}
+                      onClick={() => downloadPDF(result.data.pdf.data, result.data.pdf.filename)}
                       className="w-full bg-orange-500 hover:bg-orange-600 text-white justify-start"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       {result.data.pdf.filename}
                     </Button>
+                  )}
+                  {result.data.pdf && !result.data.pdf.data && (
+                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                      <p className="text-yellow-400 text-sm">
+                        ⚠️ El PDF no contiene datos. Es posible que no haya información disponible para este NSS.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}

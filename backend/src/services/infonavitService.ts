@@ -267,9 +267,30 @@ export const consultarAvisos = async (credito: string, userId: string): Promise<
       throw new Error('Respuesta inválida del servidor INFONAVIT');
     }
 
-    // Verificar si hay un error en la respuesta (status diferente de 200 o sin PDF)
+    // Verificar status de la respuesta
     const contenido = response2.data.contenido;
-    if (contenido.status && contenido.status !== 200) {
+
+    // Status 408: No hay avisos para este crédito (respuesta válida, no es error)
+    if (contenido.status === 408) {
+      await prisma.apiQuery.update({
+        where: { id: queryRecord.id },
+        data: {
+          status: QueryStatus.COMPLETED,
+          response: { message: 'No hay avisos para este crédito', status: 408 },
+        },
+      });
+
+      return {
+        success: true,
+        pdfs: [],
+        message: 'No se encontraron avisos de retención para este crédito',
+      };
+    }
+
+    // Status 201: Éxito con datos (contiene PDF)
+    // Status 200: Éxito sin datos específicos
+    // Status 102: En espera (solo debería aparecer en primera request)
+    if (contenido.status && contenido.status !== 200 && contenido.status !== 201 && contenido.status !== 102) {
       const errorMessage = contenido.message || 'Error desconocido al consultar avisos';
 
       await prisma.apiQuery.update({
@@ -283,17 +304,21 @@ export const consultarAvisos = async (credito: string, userId: string): Promise<
       throw new Error(errorMessage);
     }
 
-    // Verificar que exista el PDF
+    // Verificar que exista el PDF (solo si no es status 408)
     if (!contenido.pdf) {
       await prisma.apiQuery.update({
         where: { id: queryRecord.id },
         data: {
-          status: QueryStatus.FAILED,
-          errorMsg: 'No se encontraron avisos de retención para este crédito',
+          status: QueryStatus.COMPLETED,
+          response: { message: 'No hay avisos para este crédito' },
         },
       });
 
-      throw new Error('No se encontraron avisos de retención para este crédito');
+      return {
+        success: true,
+        pdfs: [],
+        message: 'No se encontraron avisos de retención para este crédito',
+      };
     }
 
     // Descomprimir ZIP y extraer PDFs
@@ -485,6 +510,7 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
+        ultraPremium: true,
       }
     );
 

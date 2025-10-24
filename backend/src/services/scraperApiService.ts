@@ -7,6 +7,7 @@ interface ScraperApiRequestOptions {
   body?: any;
   headers?: Record<string, string>;
   isXml?: boolean;
+  ultraPremium?: boolean;
 }
 
 interface ScraperApiResponse {
@@ -27,7 +28,7 @@ export const makeScraperApiRequest = async (
   options: ScraperApiRequestOptions
 ): Promise<ScraperApiResponse> => {
   try {
-    const { method, body, headers = {}, isXml = false } = options;
+    const { method, body, headers = {}, isXml = false, ultraPremium = false } = options;
 
     // Construir headers personalizados para ScraperAPI (sin prefijo sapi_)
     const customHeaders: Record<string, string> = {};
@@ -38,13 +39,20 @@ export const makeScraperApiRequest = async (
 
     if (method === 'GET') {
       // Para GET
+      const params: any = {
+        api_key: SCRAPER_API_KEY,
+        url,
+        country_code: 'mx',
+      };
+
+      if (ultraPremium) {
+        params.ultra_premium = 'true';
+      } else {
+        params.premium = 'true';
+      }
+
       const response = await axios.get('https://api.scraperapi.com/', {
-        params: {
-          api_key: SCRAPER_API_KEY,
-          url,
-          premium: 'true',
-          country_code: 'mx',
-        },
+        params,
         headers: customHeaders,
         timeout: 60000,
       });
@@ -66,15 +74,22 @@ export const makeScraperApiRequest = async (
         finalHeaders[key] = headers[key];
       });
 
+      const params: any = {
+        api_key: SCRAPER_API_KEY,
+        url: url,
+        country_code: 'mx',
+      };
+
+      if (ultraPremium) {
+        params.ultra_premium = 'true';
+      } else {
+        params.premium = 'true';
+      }
+
       const response = await axios({
         method: 'POST',
         url: 'https://api.scraperapi.com/',
-        params: {
-          api_key: SCRAPER_API_KEY,
-          url: url,
-          premium: 'true',
-          country_code: 'mx',
-        },
+        params,
         data: postData,
         headers: finalHeaders,
         timeout: 60000,
