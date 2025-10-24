@@ -509,8 +509,9 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
         body: { numeroCredito: credito },
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
-        ultraPremium: true,
       }
     );
 
