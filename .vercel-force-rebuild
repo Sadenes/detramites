@@ -1,0 +1,3 @@
+# Force Vercel rebuild - 2025-10-25
+# This file forces Vercel to rebuild from scratch
+REBUILD_TIMESTAMP=1761372893
