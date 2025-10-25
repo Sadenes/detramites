@@ -164,6 +164,22 @@ export const infonavitApi = {
       body: JSON.stringify({ nss }),
     });
   },
+
+  // 8. Verificación de cuenta
+  verificarCuenta: async (nss: string): Promise<ApiResponse> => {
+    return fetchWithAuth('/api/infonavit/verificar-cuenta', {
+      method: 'POST',
+      body: JSON.stringify({ nss }),
+    });
+  },
+
+  // 9. Consultar datos de contacto
+  consultarDatosContacto: async (nss: string): Promise<ApiResponse> => {
+    return fetchWithAuth('/api/infonavit/consultar-datos-contacto', {
+      method: 'POST',
+      body: JSON.stringify({ nss }),
+    });
+  },
 };
 
 // Credits API

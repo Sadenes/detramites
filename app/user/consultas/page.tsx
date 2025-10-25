@@ -106,33 +106,12 @@ export default function ConsultasPage() {
           break
 
         case "contact":
-          // Simulación de consulta de datos de contacto
-          response = {
-            message: "Datos de contacto obtenidos exitosamente",
-            contactData: {
-              nss: inputValue,
-              nombre: "JUAN PÉREZ GARCÍA",
-              telefono: "55-1234-5678",
-              email: "juan.perez@example.com",
-              direccion: "Calle Principal #123, Col. Centro, CDMX"
-            }
-          }
+          response = await infonavitApi.consultarDatosContacto(inputValue)
           setResult({ type: "contact", data: response })
           break
 
         case "verification":
-          // Simulación de verificación de cuenta
-          response = {
-            message: "Verificación de cuenta completada",
-            verificationData: {
-              nss: inputValue,
-              estadoCuenta: "ACTIVA",
-              tieneCredito: true,
-              numeroCredito: "1234567890",
-              fechaUltimaActualizacion: new Date().toLocaleDateString('es-MX'),
-              estatusVerificacion: "VERIFICADO"
-            }
-          }
+          response = await infonavitApi.verificarCuenta(inputValue)
           setResult({ type: "verification", data: response })
           break
       }
@@ -1087,33 +1066,23 @@ export default function ConsultasPage() {
                 Consultar Datos de Contacto
               </Button>
 
-              {result?.type === "contact" && (
+              {result?.type === "contact" && result.data.success && (
                 <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-3">
                   <div className="flex items-center gap-2 text-green-400 mb-4">
                     <CheckCircle2 className="w-5 h-5" />
-                    <span className="font-medium">{result.data.message}</span>
+                    <span className="font-medium">Datos de contacto obtenidos</span>
                   </div>
-                  <div className="space-y-3">
-                    <div className="p-3 bg-white/5 rounded-lg">
-                      <p className="text-white/60 text-xs mb-1">NSS</p>
-                      <p className="text-white font-medium">{result.data.contactData.nss}</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-lg">
-                      <p className="text-white/60 text-xs mb-1">Nombre Completo</p>
-                      <p className="text-white font-medium">{result.data.contactData.nombre}</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-lg">
-                      <p className="text-white/60 text-xs mb-1">Teléfono</p>
-                      <p className="text-white font-medium">{result.data.contactData.telefono}</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-lg">
-                      <p className="text-white/60 text-xs mb-1">Correo Electrónico</p>
-                      <p className="text-white font-medium">{result.data.contactData.email}</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-lg">
-                      <p className="text-white/60 text-xs mb-1">Dirección</p>
-                      <p className="text-white font-medium">{result.data.contactData.direccion}</p>
-                    </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {Object.entries(result.data.data).map(([key, value]) => (
+                          <tr key={key} className="border-b border-white/10">
+                            <td className="py-2 px-3 text-white/60 font-medium whitespace-nowrap">{key}</td>
+                            <td className="py-2 px-3 text-white">{String(value)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
@@ -1181,7 +1150,55 @@ export default function ConsultasPage() {
                 Verificar Cuenta
               </Button>
 
-              {result?.type === "verification" && (
+              {result?.type === "verification" && result.data.success && (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-green-400 mb-4">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="font-medium">Verificación de cuenta completada</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {Object.entries(result.data.data).map(([key, value]) => (
+                          <tr key={key} className="border-b border-white/10">
+                            <td className="py-2 px-3 text-white/60 font-medium whitespace-nowrap">{key}</td>
+                            <td className="py-2 px-3 text-white">{String(value)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {result?.type === "verification" && !result.data.success && (
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-400">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="font-medium">{result.data.message || 'No se pudo verificar la cuenta'}</span>
+                  </div>
+                </div>
+              )}
+
+              {result?.type === "contact" && !result.data.success && (
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-400">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="font-medium">{result.data.message || 'No se pudieron obtener los datos de contacto'}</span>
+                  </div>
+                </div>
+              )}
+
+              {error && result?.type === "verification" && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-red-400">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="font-medium">{error}</span>
+                  </div>
+                </div>
+              )}
+
+              {result?.type === "verification_old" && (
                 <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-3">
                   <div className="flex items-center gap-2 text-green-400 mb-4">
                     <CheckCircle2 className="w-5 h-5" />
