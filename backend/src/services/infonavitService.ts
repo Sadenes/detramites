@@ -580,28 +580,50 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
       }
     );
 
-    // Esperar 8 segundos para que el PDF se genere
-    await sleep(8000);
+    // Esperar 5 segundos iniciales
+    await sleep(5000);
 
-    // Request 2: Obtener resumen con ScraperAPI
-    const result2 = await scraperApiService.makeRequest(
-      'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqSummaryMovSSV',
-      {
-        method: 'POST',
-        body: {
-          nss,
-          ticket: '',
-        },
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'User-Agent': 'Mozilla/5.0 (platform; rv:geckoversion) Gecko/geckotrail Firefox/firefoxversion',
-          'Connection': 'keep-alive',
-        },
+    // Request 2: Obtener resumen con ScraperAPI (con reintentos)
+    let response2: any = null;
+    let attempts = 0;
+    const maxAttempts = 5; // Máximo 5 intentos
+
+    while (attempts < maxAttempts) {
+      attempts++;
+
+      console.log(`=== Intento ${attempts}/${maxAttempts} para obtener PDF ===`);
+
+      const result2 = await scraperApiService.makeRequest(
+        'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqSummaryMovSSV',
+        {
+          method: 'POST',
+          body: {
+            nss,
+            ticket: '',
+          },
+          headers: {
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'User-Agent': 'Mozilla/5.0 (platform; rv:geckoversion) Gecko/geckotrail Firefox/firefoxversion',
+            'Connection': 'keep-alive',
+          },
+        }
+      );
+
+      response2 = JSON.parse(result2.data);
+
+      // Si el PDF está listo (codeOp = '00' y existe PDF), salir del loop
+      if (response2.codeOp === '00' && response2.pdf && response2.pdf.length > 0) {
+        console.log(`✓ PDF obtenido exitosamente en intento ${attempts}`);
+        break;
       }
-    );
 
-    const response2 = JSON.parse(result2.data);
+      // Si aún no está listo y no es el último intento, esperar 4 segundos más
+      if (attempts < maxAttempts) {
+        console.log(`⏳ PDF no listo (codeOp: ${response2.codeOp}), esperando 4 segundos...`);
+        await sleep(4000);
+      }
+    }
 
     // Log para debugging
     console.log('=== Resumen Movimientos Response Debug ===');
