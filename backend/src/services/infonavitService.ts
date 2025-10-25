@@ -539,7 +539,7 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
   }
 };
 
-// 6. RESUMEN DE MOVIMIENTOS (2 requests automáticas - MIGRADO A SCRAPERAPI)
+// 6. RESUMEN DE MOVIMIENTOS (2 requests automáticas - SIN SCRAPERAPI)
 export const resumenMovimientos = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -552,85 +552,70 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
   });
 
   try {
-    // Request 1: Solicitar ticket con ScraperAPI
-    await scraperApiService.makeRequest(
+    // Request 1: Solicitar ticket (sin ScraperAPI para mantener sesión)
+    const response1 = await axios.post(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqTicketSummaryMovSSV',
       {
-        method: 'POST',
-        body: {
-          docFa: 0,
-          docTodo: 1,
-          docViv92: 0,
-          docViv97Todo: 0,
-          emailDh: '',
-          idSistema: 4,
-          nombreDh: '',
-          nss,
-          subCatA: 0,
-          subCatB: 0,
-          subCatC: 0,
-          tipoFormato: 1,
-        },
+        docFa: 0,
+        docTodo: 1,
+        docViv92: 0,
+        docViv97Todo: 0,
+        emailDh: '',
+        idSistema: 4,
+        nombreDh: '',
+        nss,
+        subCatA: 0,
+        subCatB: 0,
+        subCatC: 0,
+        tipoFormato: 1,
+      },
+      {
         headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br, zstd',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Cache-Control': 'max-age=0, no-cache, no-store',
-          'Pragma': 'no-cache',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Sec-Ch-Ua': '"Not;A=Brand";v="99", "Chromium";v="139"',
-          'Sec-Ch-Ua-Mobile': '?0',
-          'Sec-Ch-Ua-Platform': '"Linux"',
-          'Upgrade-Insecure-Requests': '1',
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
           'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
         },
+        httpsAgent,
+        timeout: 30000,
       }
     );
 
-    // Esperar 5 segundos iniciales
-    await sleep(5000);
+    console.log('=== Request 1 Response ===');
+    console.log('Status:', response1.status);
+    console.log('Data:', response1.data);
+    console.log('=========================');
 
-    // Request 2: Obtener resumen con ScraperAPI (con reintentos)
+    // Esperar 6 segundos (basado en tu prueba manual exitosa)
+    await sleep(6000);
+
+    // Request 2: Obtener resumen (con reintentos, máximo 3)
     let response2: any = null;
     let attempts = 0;
-    const maxAttempts = 5; // Máximo 5 intentos
+    const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
       attempts++;
 
       console.log(`=== Intento ${attempts}/${maxAttempts} para obtener PDF ===`);
 
-      const result2 = await scraperApiService.makeRequest(
+      const result2 = await axios.post(
         'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqSummaryMovSSV',
         {
-          method: 'POST',
-          body: {
-            nss,
-            ticket: '',
-          },
+          nss,
+          ticket: '',
+        },
+        {
           headers: {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br, zstd',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Cache-Control': 'max-age=0, no-cache, no-store',
-            'Pragma': 'no-cache',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Sec-Ch-Ua': '"Not;A=Brand";v="99", "Chromium";v="139"',
-            'Sec-Ch-Ua-Mobile': '?0',
-            'Sec-Ch-Ua-Platform': '"Linux"',
-            'Upgrade-Insecure-Requests': '1',
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Accept': 'application/json',
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
           },
+          httpsAgent,
+          timeout: 30000,
         }
       );
 
-      response2 = JSON.parse(result2.data);
+      response2 = result2.data;
 
       // Si el PDF está listo (codeOp = '00' y existe PDF), salir del loop
       if (response2.codeOp === '00' && response2.pdf && response2.pdf.length > 0) {
@@ -638,10 +623,10 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
         break;
       }
 
-      // Si aún no está listo y no es el último intento, esperar 4 segundos más
+      // Si aún no está listo y no es el último intento, esperar 3 segundos más
       if (attempts < maxAttempts) {
-        console.log(`⏳ PDF no listo (codeOp: ${response2.codeOp}), esperando 4 segundos...`);
-        await sleep(4000);
+        console.log(`⏳ PDF no listo (codeOp: ${response2.codeOp}), esperando 3 segundos...`);
+        await sleep(3000);
       }
     }
 
