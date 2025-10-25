@@ -9,6 +9,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Force cache bust - updated 2025-10-25
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
 }
 
 export default nextConfig
