@@ -102,6 +102,8 @@ app.listen(PORT, () => {
   console.log('  POST   /api/infonavit/estado-historico');
   console.log('  POST   /api/infonavit/resumen-movimientos');
   console.log('  POST   /api/infonavit/buscar-credito');
+  console.log('  POST   /api/infonavit/verificar-cuenta');
+  console.log('  POST   /api/infonavit/consultar-datos-contacto');
   console.log('');
   console.log('  GET    /api/monitoring/sessions');
   console.log('  GET    /api/monitoring/failed-logins');
