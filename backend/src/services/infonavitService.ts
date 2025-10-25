@@ -722,20 +722,16 @@ export const verificarCuenta = async (nss: string, userId: string): Promise<any>
     const parsed = await parseStringPromise(xmlResponse, { explicitArray: false });
     const returnData = parsed['S:Envelope']['S:Body']['ns2:validaNssResponse']['return'];
 
-    // Formatear respuesta en tabla
+    // Formatear respuesta en tabla (basado en la respuesta real del XML)
     const tabla = {
       'Código': returnData.codigo || 'N/A',
       'Descripción': returnData.descripcion || 'N/A',
-      'NSS (Respuesta)': returnData.nss || 'N/A',
-      'Paso Actual': returnData.pasoActual || 'N/A',
-      'Apellido Materno': returnData.usuario?.apellidoMaterno || 'N/A',
-      'Apellido Paterno': returnData.usuario?.apellidoPaterno || 'N/A',
-      'CURP': returnData.usuario?.curp || 'N/A',
-      'Existe en LDAP': returnData.usuario?.existeEnLdap || 'N/A',
-      'Nombre': returnData.usuario?.nombre || 'N/A',
-      'NSS': returnData.usuario?.nss || 'N/A',
-      'Perdió Código Verificador': returnData.usuario?.perdioCodigoVerificador || 'N/A',
-      'RFC': returnData.usuario?.rfc || 'N/A',
+      'NSS': returnData.nss || 'N/A',
+      'Código de Activación': returnData.usuario?.codigoActivacion || 'N/A',
+      'Email': returnData.usuario?.email || 'N/A',
+      'Teléfono Celular': returnData.usuario?.telefonoCelular || 'N/A',
+      'Existe en LDAP': returnData.usuario?.existeEnLdap !== undefined ? String(returnData.usuario.existeEnLdap) : 'N/A',
+      'Perdió Código Verificador': returnData.usuario?.perdioCodigoVerificador !== undefined ? String(returnData.usuario.perdioCodigoVerificador) : 'N/A',
     };
 
     await prisma.apiQuery.update({
