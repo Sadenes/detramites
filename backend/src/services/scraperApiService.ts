@@ -8,6 +8,7 @@ interface ScraperApiRequestOptions {
   headers?: Record<string, string>;
   isXml?: boolean;
   ultraPremium?: boolean;
+  sessionNumber?: number;
 }
 
 interface ScraperApiResponse {
@@ -28,7 +29,7 @@ export const makeScraperApiRequest = async (
   options: ScraperApiRequestOptions
 ): Promise<ScraperApiResponse> => {
   try {
-    const { method, body, headers = {}, isXml = false, ultraPremium = false } = options;
+    const { method, body, headers = {}, isXml = false, ultraPremium = false, sessionNumber } = options;
 
     // Construir headers personalizados para ScraperAPI (sin prefijo sapi_)
     const customHeaders: Record<string, string> = {};
@@ -84,6 +85,11 @@ export const makeScraperApiRequest = async (
         params.ultra_premium = 'true';
       } else {
         params.premium = 'true';
+      }
+
+      // Agregar session_number si se especificó (mantiene cookies entre requests)
+      if (sessionNumber !== undefined) {
+        params.session_number = sessionNumber;
       }
 
       // Log detallado de la request

@@ -539,7 +539,7 @@ export const estadoCuentaHistorico = async (credito: string, userId: string): Pr
   }
 };
 
-// 6. RESUMEN DE MOVIMIENTOS (2 requests automáticas - SIN SCRAPERAPI)
+// 6. RESUMEN DE MOVIMIENTOS (2 requests con ScraperAPI + session_number)
 export const resumenMovimientos = async (nss: string, userId: string): Promise<any> => {
   const queryRecord = await prisma.apiQuery.create({
     data: {
@@ -552,40 +552,40 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
   });
 
   try {
-    // Request 1: Solicitar ticket (sin ScraperAPI para mantener sesión)
-    const response1 = await axios.post(
+    // Generar un session_number único para mantener cookies entre ambas requests
+    const sessionNumber = Math.floor(Math.random() * 1000000);
+    console.log(`=== Usando session_number: ${sessionNumber} ===`);
+
+    // Request 1: Solicitar ticket con ScraperAPI
+    await scraperApiService.makeRequest(
       'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqTicketSummaryMovSSV',
       {
-        docFa: 0,
-        docTodo: 1,
-        docViv92: 0,
-        docViv97Todo: 0,
-        emailDh: '',
-        idSistema: 4,
-        nombreDh: '',
-        nss,
-        subCatA: 0,
-        subCatB: 0,
-        subCatC: 0,
-        tipoFormato: 1,
-      },
-      {
+        method: 'POST',
+        body: {
+          docFa: 0,
+          docTodo: 1,
+          docViv92: 0,
+          docViv97Todo: 0,
+          emailDh: '',
+          idSistema: 4,
+          nombreDh: '',
+          nss,
+          subCatA: 0,
+          subCatB: 0,
+          subCatC: 0,
+          tipoFormato: 1,
+        },
         headers: {
           'Content-Type': 'application/json; charset=UTF-8',
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
         },
-        httpsAgent,
-        timeout: 30000,
+        sessionNumber, // Mantener sesión
       }
     );
 
-    console.log('=== Request 1 Response ===');
-    console.log('Status:', response1.status);
-    console.log('Data:', response1.data);
-    console.log('=========================');
+    console.log('✓ Request 1 completada, esperando 6 segundos...');
 
-    // Esperar 6 segundos (basado en tu prueba manual exitosa)
+    // Esperar 6 segundos (basado en prueba manual exitosa)
     await sleep(6000);
 
     // Request 2: Obtener resumen (con reintentos, máximo 3)
@@ -598,24 +598,23 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
 
       console.log(`=== Intento ${attempts}/${maxAttempts} para obtener PDF ===`);
 
-      const result2 = await axios.post(
+      const result2 = await scraperApiService.makeRequest(
         'https://serviciosweb.infonavit.org.mx/RESTAdapter/ServOrqResMov/SndReqSummaryMovSSV',
         {
-          nss,
-          ticket: '',
-        },
-        {
+          method: 'POST',
+          body: {
+            nss,
+            ticket: '',
+          },
           headers: {
             'Content-Type': 'application/json; charset=UTF-8',
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
           },
-          httpsAgent,
-          timeout: 30000,
+          sessionNumber, // Mismo session_number para mantener cookies
         }
       );
 
-      response2 = result2.data;
+      response2 = JSON.parse(result2.data);
 
       // Si el PDF está listo (codeOp = '00' y existe PDF), salir del loop
       if (response2.codeOp === '00' && response2.pdf && response2.pdf.length > 0) {
