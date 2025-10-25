@@ -580,8 +580,8 @@ export const resumenMovimientos = async (nss: string, userId: string): Promise<a
       }
     );
 
-    // Esperar 3 segundos para que el PDF se genere
-    await sleep(3000);
+    // Esperar 8 segundos para que el PDF se genere
+    await sleep(8000);
 
     // Request 2: Obtener resumen con ScraperAPI
     const result2 = await scraperApiService.makeRequest(
