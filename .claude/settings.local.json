@@ -27,7 +27,9 @@
       "WebFetch(domain:scrapfly.io)",
       "Bash(node test-scrapfly.js)",
       "Bash(node:*)",
-      "Bash(npx playwright install:*)"
+      "Bash(npx playwright install:*)",
+      "Bash(git log:*)",
+      "WebFetch(domain:docs.scraperapi.com)"
     ],
     "deny": [],
     "ask": []

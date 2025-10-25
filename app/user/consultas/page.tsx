@@ -108,11 +108,13 @@ export default function ConsultasPage() {
 
         case "contact":
           response = await infonavitApi.consultarDatosContacto(inputValue)
+          console.log("=== CONSULTAR DATOS CONTACTO RESPONSE ===", JSON.stringify(response, null, 2))
           setResult({ type: "contact", data: response })
           break
 
         case "verification":
           response = await infonavitApi.verificarCuenta(inputValue)
+          console.log("=== VERIFICAR CUENTA RESPONSE ===", JSON.stringify(response, null, 2))
           setResult({ type: "verification", data: response })
           break
       }
