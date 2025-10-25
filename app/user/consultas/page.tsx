@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   UserCheck,
   Shield,
+  AlertCircle,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { infonavitApi, downloadPDF } from "@/lib/api"
